@@ -57,12 +57,24 @@ class StatsdMixin(object):
         more than replacing periods with dashes.
 
         """
-        settings = self.settings[self.SETTINGS_KEY]
-        normalized = '.'.join(str(p).replace('.', '-') for p in path)
-        msg = '{0}.{1}:{2}|ms'.format(settings['namespace'], normalized,
-                                      milliseconds)
-        settings['socket'].sendto(msg.encode('ascii'),
-                                  (settings['host'], int(settings['port'])))
+        self._send(self._build_path(path), milliseconds, 'ms')
+
+    def increase_counter(self, *path, **kwargs):
+        """
+        Increase a counter.
+
+        :param path: elements of the metric path to incr
+        :keyword int amount: amount to increase the counter by.  If
+            omitted, the counter is increased by one.
+
+        This method increases a counter within the application's
+        namespace.  Each element of `path` is converted to a string
+        and normalized before joining the elements by periods.  The
+        normalization process is little more than replacing periods
+        with dashes.
+
+        """
+        self._send(self._build_path(path), kwargs.get('amount', '1'), 'c')
 
     def on_finish(self):
         """
@@ -80,3 +92,15 @@ class StatsdMixin(object):
         self.record_timing(self.request.request_time() * 1000,
                            self.__class__.__name__, self.request.method,
                            self.__status_code)
+
+    def _build_path(self, path):
+        """Return a normalized path."""
+        return '{}.{}'.format(self.settings[self.SETTINGS_KEY]['namespace'],
+                              '.'.join(str(p).replace('.', '-') for p in path))
+
+    def _send(self, path, value, stat_type):
+        """Send a metric to Statsd."""
+        settings = self.settings[self.SETTINGS_KEY]
+        msg = '{0}:{1}|{2}'.format(path, value, stat_type)
+        settings['socket'].sendto(msg.encode('ascii'),
+                                  (settings['host'], int(settings['port'])))

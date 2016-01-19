@@ -20,6 +20,12 @@ class SimpleHandler(metrics.StatsdMixin, web.RequestHandler):
         self.set_status(204)
         self.finish()
 
+    def post(self):
+        """Example of increasing a counter."""
+        self.increase_counter('request', 'path')
+        self.set_status(204)
+
+
 def _sig_handler(*args_):
     iol = ioloop.IOLoop.instance()
     iol.add_callback_from_signal(iol.stop)

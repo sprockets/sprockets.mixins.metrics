@@ -10,10 +10,16 @@ implements the same interface:
       Key in ``self.application.settings`` that contains this particular
       mix-in's configuration data.
 
-   .. method:: record_timing(path, milliseconds)
+   .. method:: record_timing(milliseconds, *path)
+      :noindex:
 
-      :param str path: timing path to record
       :param float milliseconds: number of milliseconds to record
+      :param path: timing path to record
+
+   .. method:: increase_counter(*path, amount=1)
+
+      :param path: counter path to increment
+      :keyword int amount: value to increase the counter by
 
 
 Statsd Implementation

@@ -7,11 +7,20 @@ from sprockets.mixins.metrics.testing import FakeStatsdServer
 import examples.statsd
 
 
+class CounterBumper(metrics.StatsdMixin, web.RequestHandler):
+
+    def post(self, counter, amount):
+        path = counter.split('.')
+        self.increase_counter(*path, amount=int(amount))
+        self.set_status(204)
+
+
 class StatsdMethodTimingTests(testing.AsyncHTTPTestCase):
 
     def get_app(self):
         self.application = web.Application([
             web.url('/', examples.statsd.SimpleHandler),
+            web.url('/counters/(\w*)/(\d*)', CounterBumper),
         ])
         return self.application
 
@@ -54,3 +63,19 @@ class StatsdMethodTimingTests(testing.AsyncHTTPTestCase):
         self.assertEqual(
             self.settings['namespace'],
             'applications.' + examples.statsd.SimpleHandler.__module__)
+
+    def test_that_counter_increment_defaults_to_one(self):
+        response = self.fetch('/', method='POST', body='')
+        self.assertEqual(response.code, 204)
+
+        prefix = 'testing.request.path'
+        for path, value, stat_type in self.statsd.find_metrics(prefix, 'c'):
+            self.assertEqual(int(value), 1)
+
+    def test_that_counter_accepts_increment_value(self):
+        response = self.fetch('/counters/path/5', method='POST', body='')
+        self.assertEqual(response.code, 204)
+
+        prefix = 'testing.path'
+        for path, value, stat_type in self.statsd.find_metrics(prefix, 'c'):
+            self.assertEqual(int(value), 5)
