@@ -1,4 +1,6 @@
+import contextlib
 import socket
+import time
 
 
 class StatsdMixin(object):
@@ -75,6 +77,25 @@ class StatsdMixin(object):
 
         """
         self._send(self._build_path(path), kwargs.get('amount', '1'), 'c')
+
+    @contextlib.contextmanager
+    def execution_timer(self, *path):
+        """
+        Record the time it takes to perform an arbitrary code block.
+
+        :param path: elements of the metric path to record
+
+        This method returns a context manager that records the amount
+        of time spent inside of the context and submits a timing metric
+        to the specified `path` using (:meth:`record_timing`).
+
+        """
+        start = time.time()
+        try:
+            yield
+        finally:
+            fini = max(start, time.time())
+            self.record_timing((fini - start) * 1000.0, *path)
 
     def on_finish(self):
         """
