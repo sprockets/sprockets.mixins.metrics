@@ -37,19 +37,10 @@ class StatsdMethodTimingTests(testing.AsyncHTTPTestCase):
         response = self.fetch('/')
         self.assertEqual(response.code, 204)
 
-        expected = 'testing.SimpleHandler.GET.204:'
-        for bin_msg in self.statsd.datagrams:
-            text_msg = bin_msg.decode('ascii')
-            if text_msg.startswith(expected):
-                _, _, tail = text_msg.partition(':')
-                measurement, _, measurement_type = tail.partition('|')
-                self.assertTrue(250.0 <= float(measurement) < 500.0,
-                                '{} looks wrong'.format(measurement))
-                self.assertTrue(measurement_type, 'ms')
-                break
-        else:
-            self.fail('Expected metric starting with {} in {!r}'.format(
-                expected, self.statsd.datagrams))
+        expected = 'testing.SimpleHandler.GET.204'
+        for path, value, stat_type in self.statsd.find_metrics(expected, 'ms'):
+            self.assertTrue(250.0 <= float(value) < 500.0,
+                            '{} looks wrong'.format(value))
 
     def test_that_cached_socket_is_used(self):
         sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM, 0)

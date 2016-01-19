@@ -1,4 +1,8 @@
+import re
 import socket
+
+
+STATS_PATTERN = re.compile(r'(?P<path>[^:]*):(?P<value>[^|]*)\|(?P<type>.*)$')
 
 
 class FakeStatsdServer(object):
@@ -50,3 +54,30 @@ class FakeStatsdServer(object):
         if events & self._iol.READ:
             data, _ = self.socket.recvfrom(4096)
             self.datagrams.append(data)
+
+    def find_metrics(self, prefix, metric_type):
+        """
+        Yields captured datagrams that start with `prefix`.
+
+        :param str prefix: the metric prefix to search for
+        :param str metric_type: the statsd metric type (e.g., 'ms', 'c')
+        :returns: yields (path, value, metric_type) tuples for each
+            captured metric that matches
+        :raises AssertionError: if no metrics match.
+
+        """
+        pattern = re.compile(
+            '(?P<path>{}[^:]*):(?P<value>[^|]*)\\|(?P<type>{})'.format(
+                re.escape(prefix), re.escape(metric_type)))
+        matched = False
+        for datagram in self.datagrams:
+            text_msg = datagram.decode('ascii')
+            match = pattern.match(text_msg)
+            if match:
+                yield match.groups()
+                matched = True
+
+        if not matched:
+            raise AssertionError(
+                'Expected metric starting with "{}" in {!r}'.format(
+                    prefix, self.datagrams))
