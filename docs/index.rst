@@ -7,6 +7,7 @@ License
 .. toctree::
    :hidden:
 
+   api
    examples
    contributing
    history
