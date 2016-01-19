@@ -11,7 +11,7 @@ run the test suite, update the documentation, and everything else that is
 involved in contributing.  The easiest way to do that is to create a virtual
 environment for your endevours::
 
-   $ virtualenv -p python2.7 env
+   $ python3.4 -mvenv env
 
 Don't worry about writing code against previous versions of Python unless
 you you don't have a choice.  That is why we run our tests through `tox`_.
@@ -45,53 +45,48 @@ installed python version and report not only the test result but the
 test coverage as well::
 
    $ ./setup.py nosetests
-
    running nosetests
    running egg_info
-   writing dependency_links to sprockets.http.egg-info/dependency_links.txt
-   writing top-level names to sprockets.http.egg-info/top_level.txt
-   writing sprockets.http.egg-info/PKG-INFO
-   reading manifest file 'sprockets.http.egg-info/SOURCES.txt'
+   writing sprockets.mixins.metrics.egg-info/PKG-INFO
+   writing top-level names to sprockets.mixins.metrics.egg-info/top_level.txt
+   writing dependency_links to sprockets.mixins.metrics.egg-info/dependency_links.txt
+   writing namespace_packages to sprockets.mixins.metrics.egg-info/namespace_packages.txt
+   reading manifest file 'sprockets.mixins.metrics.egg-info/SOURCES.txt'
    reading manifest template 'MANIFEST.in'
-   warning: no previously-included files matching '__pycache__'...
-   warning: no previously-included files matching '*.swp' found ...
-   writing manifest file 'sprockets.http.egg-info/SOURCES.txt'
-   ...
-
-   Name                       Stmts   Miss Branch BrMiss  Cover   Missing
+   writing manifest file 'sprockets.mixins.metrics.egg-info/SOURCES.txt'
+   test_that_cached_socket_is_used (tests.StatsdMethodTimingTests) ... ok
+   test_that_counter_accepts_increment_value (tests.StatsdMethodTimingTests) ... ok
+   test_that_counter_increment_defaults_to_one (tests.StatsdMethodTimingTests) ... ok
+   test_that_default_prefix_is_stored (tests.StatsdMethodTimingTests) ... ok
+   test_that_execution_timer_records_time_spent (tests.StatsdMethodTimingTests) ... ok
+   test_that_http_method_call_is_recorded (tests.StatsdMethodTimingTests) ... ok
+   
    ----------------------------------------------------------------------
-   ...
-   ----------------------------------------------------------------------
-   TOTAL                         95      2     59      2    97%
-   ----------------------------------------------------------------------
-   Ran 44 tests in 0.054s
-
+   Ran 6 tests in 1.080s
+   
    OK
 
 That's the quick way to run tests.  The slightly longer way is to run
-the `detox`_ utility.  It will run the test suite against all of the
-supported python versions in parallel.  This is essentially what Travis-CI
+the `tox`_ utility.  It will run the test suite against all of the supported
+python versions in parallel.  This is essentially what Travis-CI
 will do when you issue a pull request anyway::
 
-   $ env/bin/detox
-   py27 recreate: /.../sprockets.http/build/tox/py27
-   GLOB sdist-make: /.../sprockets.http/setup.py
-   py34 recreate: /.../sprockets.http/build/tox/py34
-   py27 installdeps: -rtest-requirements.txt, mock
-   py34 installdeps: -rtest-requirements.txt
-   py27 inst: /.../sprockets.http/build/tox/dist/sprockets.http-0.0.0.zip
-   py27 runtests: PYTHONHASHSEED='2156646470'
-   py27 runtests: commands[0] | /../sprockets.http/build/tox/py27/bin/nosetests
-   py34 inst: /../sprockets.http/.build/tox/dist/sprockets.http-0.0.0.zip
-   py34 runtests: PYTHONHASHSEED='2156646470'
-   py34 runtests: commands[0] | /.../sprockets.http/build/tox/py34/bin/nosetests
-   _________________________________ summary _________________________________
+   $ env/bin/tox
+   GLOB sdist-make: /Users/daves/Source/platform/sprockets.mixins.metrics/setup.py
+   py27 create: /Users/daves/Source/platform/sprockets.mixins.metrics/build/tox/py27
+   py27 installdeps: -rrequires/testing.txt
+   
+   ------------------------- >8 ------------------------------------------------------
+   
      py27: commands succeeded
      py34: commands succeeded
+     py35: commands succeeded
+   SKIPPED:  pypy: InterpreterNotFound: pypy
      congratulations :)
 
 This is what you want to see.  Now you can make your modifications and keep
-the tests passing.
+the tests passing.  If you see the "missing interpreter" errors, that means
+that you do not have all of the interpreters installed.
 
 Submitting a Pull Request
 -------------------------
@@ -107,6 +102,5 @@ it back.
 .. _flake8: http://flake8.readthedocs.org/
 .. _nose: http://nose.readthedocs.org/
 .. _sphinx: http://sphinx-doc.org/
-.. _detox: http://testrun.org/tox/
 .. _tox: http://testrun.org/tox/
 .. _virtualenv: http://virtualenv.pypa.io/
