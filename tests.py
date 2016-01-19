@@ -3,45 +3,8 @@ import socket
 from tornado import testing, web
 
 from sprockets.mixins import metrics
+from sprockets.mixins.metrics.testing import FakeStatsdServer
 import examples.statsd
-
-
-class FakeStatsdServer(object):
-    """
-    Implements something resembling a statsd server.
-
-    Received datagrams are saved off in the ``datagrams`` attribute
-    for later examination.
-
-    """
-
-    def __init__(self, iol):
-        self.socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM,
-                                    socket.IPPROTO_UDP)
-        self.socket.bind(('127.0.0.1', 0))
-        self.sockaddr = self.socket.getsockname()
-        self.datagrams = []
-
-        iol.add_handler(self.socket, self._handle_events, iol.READ)
-        self._iol = iol
-
-    def close(self):
-        if self.socket is not None:
-            if self._iol is not None:
-                self._iol.remove_handler(self.socket)
-                self._iol = None
-            self.socket.close()
-            self.socket = None
-
-    def _handle_events(self, fd, events):
-        if fd != self.socket:
-            return
-        if self._iol is None:
-            raise RuntimeError
-
-        if events & self._iol.READ:
-            data, _ = self.socket.recvfrom(4096)
-            self.datagrams.append(data)
 
 
 class StatsdMethodTimingTests(testing.AsyncHTTPTestCase):
