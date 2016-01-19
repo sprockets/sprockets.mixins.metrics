@@ -10,16 +10,36 @@ implements the same interface:
       Key in ``self.application.settings`` that contains this particular
       mix-in's configuration data.
 
-   .. method:: record_timing(milliseconds, *path)
+   .. method:: record_timing(duration, *path)
       :noindex:
 
-      :param float milliseconds: number of milliseconds to record
+      :param float duration: number of seconds to record
       :param path: timing path to record
+
+      .. code-block:: python
+
+         self.record_timing(self.request.request_time(), 'request', 'lookup')
 
    .. method:: increase_counter(*path, amount=1)
 
       :param path: counter path to increment
       :keyword int amount: value to increase the counter by
+
+      .. code-block:: python
+
+         self.increase_counter('db', 'query', 'foo')
+
+   .. method:: execution_timer(*path)
+
+      :param path: timing path to record
+
+      This method returns a context manager that records a timing
+      metric to the specified path.
+
+      .. code-block:: python
+
+         with self.execution_timer('db', 'query', 'foo'):
+             rows = yield self.session.query('SELECT * FROM foo')
 
 
 Statsd Implementation

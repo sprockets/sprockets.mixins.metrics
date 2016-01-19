@@ -45,11 +45,11 @@ class StatsdMixin(object):
         self.__status_code = status_code
         super(StatsdMixin, self).set_status(status_code, reason=reason)
 
-    def record_timing(self, milliseconds, *path):
+    def record_timing(self, duration, *path):
         """
         Record a timing.
 
-        :param float milliseconds: millisecond timing to record
+        :param float duration: timing to record in seconds
         :param path: elements of the metric path to record
 
         This method records a timing to the application's namespace
@@ -59,7 +59,7 @@ class StatsdMixin(object):
         more than replacing periods with dashes.
 
         """
-        self._send(self._build_path(path), milliseconds, 'ms')
+        self._send(self._build_path(path), duration * 1000.0, 'ms')
 
     def increase_counter(self, *path, **kwargs):
         """
@@ -95,22 +95,22 @@ class StatsdMixin(object):
             yield
         finally:
             fini = max(start, time.time())
-            self.record_timing((fini - start) * 1000.0, *path)
+            self.record_timing(fini - start, *path)
 
     def on_finish(self):
         """
         Records the time taken to process the request.
 
-        This method records the number of milliseconds that were used
-        to process the request (as reported by
-        :meth:`tornado.web.HTTPRequest.request_time` * 1000) under the
+        This method records the amount of time taken to process the request
+        (as reported by
+        :meth:`~tornado.httputil.HTTPServerRequest.request_time`) under the
         path defined by the class's module, it's name, the request method,
         and the status code.  The :meth:`.record_timing` method is used
         to send the metric, so the configured namespace is used as well.
 
         """
         super(StatsdMixin, self).on_finish()
-        self.record_timing(self.request.request_time() * 1000,
+        self.record_timing(self.request.request_time(),
                            self.__class__.__name__, self.request.method,
                            self.__status_code)
 
