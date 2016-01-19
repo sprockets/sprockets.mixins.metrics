@@ -9,7 +9,7 @@ before_install:
 - pip install -r requires/testing.txt
 install:
 - pip install -e .
-script: nosetests
+script: nosetests --with-coverage
 after_success:
 - codecov
 sudo: false
