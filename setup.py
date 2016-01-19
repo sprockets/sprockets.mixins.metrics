@@ -36,7 +36,7 @@ setuptools.setup(
     url='https://github.com/sprockets/sprockets.mixins.metrics',
     install_requires=read_requirements('installation.txt'),
     tests_require=read_requirements('testing.txt'),
-    packages=setuptools.find_packages(),
+    packages=setuptools.find_packages(exclude=['examples.']),
     namespace_packages=['sprockets', 'sprockets.mixins'],
     classifiers=[
         'Development Status :: 1 - Planning',

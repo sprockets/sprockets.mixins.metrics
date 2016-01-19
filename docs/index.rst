@@ -7,5 +7,6 @@ License
 .. toctree::
    :hidden:
 
+   examples
    contributing
    history
