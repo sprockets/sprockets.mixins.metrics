@@ -47,6 +47,14 @@ Statsd Implementation
 .. autoclass:: sprockets.mixins.metrics.StatsdMixin
    :members:
 
+InfluxDB Implementation
+-----------------------
+.. autoclass:: sprockets.mixins.metrics.InfluxDBMixin
+   :members:
+
+.. autoclass:: sprockets.mixins.metrics.influxdb.InfluxDBConnection
+   :members:
+
 Testing Helpers
 ---------------
 *So who actually tests that their metrics are emitted as they expect?*
