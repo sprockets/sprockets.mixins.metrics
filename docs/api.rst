@@ -56,3 +56,6 @@ contains some helper that make testing a little easier.
 
 .. autoclass:: sprockets.mixins.metrics.testing.FakeStatsdServer
    :members:
+
+.. autoclass:: sprockets.mixins.metrics.testing.FakeInfluxHandler
+   :members:
