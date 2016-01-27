@@ -107,6 +107,11 @@ class StatsdMethodTimingTests(testing.AsyncHTTPTestCase):
         for path, value, stat_type in self.statsd.find_metrics(prefix, 'ms'):
             assert_between(250.0, float(value), 300.0)
 
+    def test_that_add_metric_tag_is_ignored(self):
+        response = self.fetch('/',
+                              headers={'Correlation-ID': 'does not matter'})
+        self.assertEqual(response.code, 204)
+
 
 class InfluxDbTests(testing.AsyncHTTPTestCase):
 

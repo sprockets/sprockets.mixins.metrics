@@ -15,6 +15,16 @@ class SimpleHandler(metrics.StatsdMixin, web.RequestHandler):
     """
 
     @gen.coroutine
+    def prepare(self):
+        maybe_future = super(SimpleHandler, self).prepare()
+        if gen.is_future(maybe_future):
+            yield maybe_future
+
+        if 'Correlation-ID' in self.request.headers:
+            self.set_metric_tag('correlation_id',
+                                self.request.headers['Correlation-ID'])
+
+    @gen.coroutine
     def get(self):
         yield gen.sleep(0.25)
         self.set_status(204)

@@ -39,6 +39,9 @@ class StatsdMixin(object):
         settings.setdefault('port', '8125')
         self.__status_code = None
 
+    def set_metric_tag(self, tag, value):
+        """Ignored for statsd since it does not support tagging."""
+
     def set_status(self, status_code, reason=None):
         # Extended to track status code to avoid referencing the
         # _status internal variable
