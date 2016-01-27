@@ -33,6 +33,7 @@ html_theme_options = {
     'description': 'Application metrics tracker',
     'github_banner': True,
     'travis_button': True,
+    'codecov_button': True,
 }
 
 intersphinx_mapping = {
