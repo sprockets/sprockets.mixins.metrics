@@ -13,3 +13,13 @@ script: nosetests --with-coverage
 after_success:
 - codecov
 sudo: false
+deploy:
+  provider: pypi
+  user: sprockets
+  password:
+    secure: EMA/RMTwgN452CnnJxf34KIkUEY4ehiPe7kgF35i11iGti3AR/i4yxi78lD/9010rfynoRZL6eKMg+RiG1uxEQckkbu/HKcjz1VlY+Sz4KYPzY9xAcyf6kLZ4CxglfhXr+Fz0nGjsfNoM5vKVShXOVH1lJBTSjnNqHV0pt1U6R0dPhyDObfsJg/0Pax+Cyld8XaFXRGs5VcYvhkzn+L3bpTUD7EfVIsdEPO9hmz1tH9xgsVtw6Qacgpub6Zns3ODX4hj/rYS7jmQSlWBQHH2UyhQOSZ1hF9JoECMjBOAHLQknnTIGeVdT/ma20Snk3IaaCK0qEmfMUC/WMOCn3J9MlPLTbHN1sr2/6OL3zSnJKO5Cd1K7zzZfro6dkv2MaqrGuo/ZxgZPPftj+fX8pXdd7gXCtjLTUmSzIBABuWuYv9toDd8drII+qgAWv2f5GEZSkUL0OnjKlse+vWtdtAIVl4Jz9RZnwS4V9f+dHaNLiuvFCiyRzY4BgBfLOoYDi/1FOu42y+QNaQq4uTfeioUx6bl+MQOiJ43c1v0Ib8hxpm34nU9L7IFLcrrmjA6PK585Fcemk6lUrRSozrIzptBLmIAr5GsHjuBgGuWV19bR7RUA/hvWQhmpS6rqFqJAEQ1cWK+LKdHIKY/XFU3lI6beh8P+L0UEt55xHyxDFfsWKE=
+  on:
+    tags: true
+    distributions: sdist bdist_wheel
+    all_branches: true
+    python: 3.4
