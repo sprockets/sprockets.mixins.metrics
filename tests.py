@@ -1,6 +1,7 @@
 import logging
 import socket
 import time
+import uuid
 
 from tornado import gen, testing, web
 import mock
@@ -190,3 +191,18 @@ class InfluxDbTests(testing.AsyncHTTPTestCase):
         response = self.fetch('/')
         self.assertEqual(response.code, 204)
         self.assertIs(cfg['db_connection'], conn)
+
+    def test_that_metric_tag_is_tracked(self):
+        cid = str(uuid.uuid4())
+        response = self.fetch('/', headers={'Correlation-ID': cid})
+        self.assertEqual(response.code, 204)
+
+        for key, fields, timestamp in self.influx_messages:
+            if key.startswith('my-service,'):
+                tag_dict = dict(a.split('=') for a in key.split(',')[1:])
+                self.assertEqual(tag_dict['correlation_id'],
+                                 '"{}"'.format(cid))
+                break
+        else:
+            self.fail('Expected to find "request" metric in {!r}'.format(
+                    list(self.application.influx_db['requests'])))

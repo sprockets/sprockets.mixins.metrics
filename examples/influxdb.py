@@ -33,6 +33,16 @@ class SimpleHandler(metrics.InfluxDBMixin, web.RequestHandler):
     """
 
     @gen.coroutine
+    def prepare(self):
+        maybe_future = super(SimpleHandler, self).prepare()
+        if gen.is_future(maybe_future):
+            yield maybe_future
+
+        if 'Correlation-ID' in self.request.headers:
+            self.set_metric_tag('correlation_id',
+                                self.request.headers['Correlation-ID'])
+
+    @gen.coroutine
     def get(self):
         with self.execution_timer('sleepytime'):
             yield gen.sleep(0.25)
