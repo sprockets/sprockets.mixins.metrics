@@ -21,6 +21,7 @@ implements the same interface:
          self.record_timing(self.request.request_time(), 'request', 'lookup')
 
    .. method:: increase_counter(*path, amount=1)
+      :noindex:
 
       :param path: counter path to increment
       :keyword int amount: value to increase the counter by
@@ -30,6 +31,7 @@ implements the same interface:
          self.increase_counter('db', 'query', 'foo')
 
    .. method:: execution_timer(*path)
+      :noindex:
 
       :param path: timing path to record
 
@@ -40,6 +42,16 @@ implements the same interface:
 
          with self.execution_timer('db', 'query', 'foo'):
              rows = yield self.session.query('SELECT * FROM foo')
+
+   .. method:: set_metric_tag(tag, value)
+      :noindex:
+
+      :param str tag: the tag to set
+      :param str value: the value to assign to the tag
+
+      This method stores a tag and value pair to be reported with
+      metrics.  It is only implemented on back-ends that support
+      tagging metrics (e.g., :class:`sprockets.mixins.metrics.InfluxDBMixin`)
 
 
 Statsd Implementation

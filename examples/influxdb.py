@@ -2,7 +2,7 @@ import os
 import signal
 
 from sprockets.mixins import metrics
-from tornado import gen, ioloop, web
+from tornado import concurrent, gen, ioloop, web
 
 
 class SimpleHandler(metrics.InfluxDBMixin, web.RequestHandler):
@@ -31,6 +31,16 @@ class SimpleHandler(metrics.InfluxDBMixin, web.RequestHandler):
     and the slept and sleepytime values are added in the method.
 
     """
+
+    @gen.coroutine
+    def prepare(self):
+        maybe_future = super(SimpleHandler, self).prepare()
+        if concurrent.is_future(maybe_future):
+            yield maybe_future
+
+        if 'Correlation-ID' in self.request.headers:
+            self.set_metric_tag('correlation_id',
+                                self.request.headers['Correlation-ID'])
 
     @gen.coroutine
     def get(self):

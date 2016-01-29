@@ -21,7 +21,7 @@ master_doc = 'index'
 exclude_patterns = []
 pygments_style = 'sphinx'
 html_style = 'custom.css'
-html_static_path = ['.']
+html_static_path = ['_static']
 html_theme = 'alabaster'
 html_theme_path = [alabaster.get_path()]
 html_sidebars = {
@@ -33,6 +33,7 @@ html_theme_options = {
     'description': 'Application metrics tracker',
     'github_banner': True,
     'travis_button': True,
+    'codecov_button': True,
 }
 
 intersphinx_mapping = {

@@ -1,7 +1,7 @@
 import signal
 
 from sprockets.mixins import metrics
-from tornado import gen, ioloop, web
+from tornado import concurrent, gen, ioloop, web
 
 
 class SimpleHandler(metrics.StatsdMixin, web.RequestHandler):
@@ -13,6 +13,16 @@ class SimpleHandler(metrics.StatsdMixin, web.RequestHandler):
     a request handler.
 
     """
+
+    @gen.coroutine
+    def prepare(self):
+        maybe_future = super(SimpleHandler, self).prepare()
+        if concurrent.is_future(maybe_future):
+            yield maybe_future
+
+        if 'Correlation-ID' in self.request.headers:
+            self.set_metric_tag('correlation_id',
+                                self.request.headers['Correlation-ID'])
 
     @gen.coroutine
     def get(self):

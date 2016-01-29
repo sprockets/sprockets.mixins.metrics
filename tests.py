@@ -1,6 +1,7 @@
 import logging
 import socket
 import time
+import uuid
 
 from tornado import gen, testing, web
 import mock
@@ -106,6 +107,11 @@ class StatsdMethodTimingTests(testing.AsyncHTTPTestCase):
         for path, value, stat_type in self.statsd.find_metrics(prefix, 'ms'):
             assert_between(250.0, float(value), 300.0)
 
+    def test_that_add_metric_tag_is_ignored(self):
+        response = self.fetch('/',
+                              headers={'Correlation-ID': 'does not matter'})
+        self.assertEqual(response.code, 204)
+
 
 class InfluxDbTests(testing.AsyncHTTPTestCase):
 
@@ -140,9 +146,10 @@ class InfluxDbTests(testing.AsyncHTTPTestCase):
             if key.startswith('my-service,'):
                 tag_dict = dict(a.split('=') for a in key.split(',')[1:])
                 self.assertEqual(tag_dict['handler'],
-                                 'examples.influxdb.SimpleHandler')
-                self.assertEqual(tag_dict['method'], 'GET')
-                self.assertEqual(tag_dict['host'], socket.gethostname())
+                                 '"examples.influxdb.SimpleHandler"')
+                self.assertEqual(tag_dict['method'], '"GET"')
+                self.assertEqual(tag_dict['host'],
+                                 '"{}"'.format(socket.gethostname()))
 
                 value_dict = dict(a.split('=') for a in fields.split(','))
                 assert_between(0.25, float(value_dict['duration']), 0.3)
@@ -189,3 +196,18 @@ class InfluxDbTests(testing.AsyncHTTPTestCase):
         response = self.fetch('/')
         self.assertEqual(response.code, 204)
         self.assertIs(cfg['db_connection'], conn)
+
+    def test_that_metric_tag_is_tracked(self):
+        cid = str(uuid.uuid4())
+        response = self.fetch('/', headers={'Correlation-ID': cid})
+        self.assertEqual(response.code, 204)
+
+        for key, fields, timestamp in self.influx_messages:
+            if key.startswith('my-service,'):
+                tag_dict = dict(a.split('=') for a in key.split(',')[1:])
+                self.assertEqual(tag_dict['correlation_id'],
+                                 '"{}"'.format(cid))
+                break
+        else:
+            self.fail('Expected to find "request" metric in {!r}'.format(
+                    list(self.application.influx_db['requests'])))
