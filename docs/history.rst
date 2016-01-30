@@ -6,6 +6,7 @@ Release History
 `Next Release`_
 ---------------
 - Remove extraneous quotes from InfluxDB tag values.
+- Convert HTTP status code from a value to a tag in the InfluxDB mix-in.
 
 `0.9.0`_ (27-Jan-2016)
 ----------------------
