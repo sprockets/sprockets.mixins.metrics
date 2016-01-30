@@ -137,6 +137,6 @@ class InfluxDBMixin(object):
         self.record_timing(self.request.request_time(), 'duration')
         self.settings[self.SETTINGS_KEY]['db_connection'].submit(
             self.settings[self.SETTINGS_KEY]['measurement'],
-            ('{}="{}"'.format(k, v) for k, v in self.__tags.items()),
+            ('{}={}'.format(k, v) for k, v in self.__tags.items()),
             self.__metrics,
         )
