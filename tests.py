@@ -146,10 +146,9 @@ class InfluxDbTests(testing.AsyncHTTPTestCase):
             if key.startswith('my-service,'):
                 tag_dict = dict(a.split('=') for a in key.split(',')[1:])
                 self.assertEqual(tag_dict['handler'],
-                                 '"examples.influxdb.SimpleHandler"')
-                self.assertEqual(tag_dict['method'], '"GET"')
-                self.assertEqual(tag_dict['host'],
-                                 '"{}"'.format(socket.gethostname()))
+                                 'examples.influxdb.SimpleHandler')
+                self.assertEqual(tag_dict['method'], 'GET')
+                self.assertEqual(tag_dict['host'], socket.gethostname())
 
                 value_dict = dict(a.split('=') for a in fields.split(','))
                 assert_between(0.25, float(value_dict['duration']), 0.3)
@@ -205,8 +204,7 @@ class InfluxDbTests(testing.AsyncHTTPTestCase):
         for key, fields, timestamp in self.influx_messages:
             if key.startswith('my-service,'):
                 tag_dict = dict(a.split('=') for a in key.split(',')[1:])
-                self.assertEqual(tag_dict['correlation_id'],
-                                 '"{}"'.format(cid))
+                self.assertEqual(tag_dict['correlation_id'], cid)
                 break
         else:
             self.fail('Expected to find "request" metric in {!r}'.format(
