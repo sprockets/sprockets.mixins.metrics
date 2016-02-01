@@ -149,10 +149,10 @@ class InfluxDbTests(testing.AsyncHTTPTestCase):
                                  'examples.influxdb.SimpleHandler')
                 self.assertEqual(tag_dict['method'], 'GET')
                 self.assertEqual(tag_dict['host'], socket.gethostname())
+                self.assertEqual(tag_dict['status_code'], '204')
 
                 value_dict = dict(a.split('=') for a in fields.split(','))
                 assert_between(0.25, float(value_dict['duration']), 0.3)
-                self.assertEqual(value_dict['status_code'], '204')
 
                 nanos_since_epoch = int(timestamp)
                 then = nanos_since_epoch / 1000000000
