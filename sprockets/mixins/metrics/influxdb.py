@@ -6,8 +6,7 @@ from tornado import httpclient, ioloop
 
 
 class InfluxDBConnection(object):
-    """
-    Connection to an InfluxDB instance.
+    """Connection to an InfluxDB instance.
 
     :param str write_url: the URL to send HTTP requests to
     :param str database: the database to write measurements into
@@ -15,6 +14,10 @@ class InfluxDBConnection(object):
         If this parameter is :data:`None`, then the active IOLoop,
         as determined by :meth:`tornado.ioloop.IOLoop.instance`,
         is used.
+    :param int max_buffer_time: the maximum elasped time measurements
+        should remain in buffer before writing to InfluxDB.
+    :param int max_buffer_length: the maximum number of measurements to
+        buffer before writing to InfluxDB.
 
     An instance of this class is stored in the application settings
     and used to asynchronously send measurements to InfluxDB instance.
@@ -23,18 +26,51 @@ class InfluxDBConnection(object):
 
     """
 
-    def __init__(self, write_url, database, io_loop=None):
+    MAX_BUFFER_TIME = 5
+    MAX_BUFFER_LENGTH = 100
+
+    def __init__(self, write_url, database, io_loop=None,
+                 max_buffer_time=5, max_buffer_length=100):
         self.io_loop = ioloop.IOLoop.instance() if io_loop is None else io_loop
         self.client = httpclient.AsyncHTTPClient()
         self.write_url = '{}?db={}'.format(write_url, database)
 
+        self._buffer = []
+        self._max_buffer_time = float(max_buffer_time)
+        self._max_buffer_length = int(max_buffer_length)
+        self._last_write = self.io_loop.time()
+
     def submit(self, measurement, tags, values):
+        """Write the data using the HTTP API
+
+        :param str measurement: The required measurement name
+        :param list tags: The measurement tags
+        :param list values: The recorded measurements
+        """
         body = '{},{} {} {:d}'.format(measurement, ','.join(tags),
                                       ','.join(values),
                                       int(time.time() * 1000000000))
+        self._buffer.append(body)
+        if self._should_write:
+            self._write()
+
+    def _write(self):
+        """Write the measurement"""
+        body = '\n'.join(self._buffer)
         request = httpclient.HTTPRequest(self.write_url, method='POST',
                                          body=body.encode('utf-8'))
         ioloop.IOLoop.current().spawn_callback(self.client.fetch, request)
+        self._last_write = self.io_loop.time()
+        del self._buffer[:]
+
+    @property
+    def _should_write(self):
+        """Returns ``True`` if the buffered measurements should be sent"""
+        if len(self._buffer) >= self._max_buffer_length:
+            return True
+        if self.io_loop.time() >= (self._last_write + self._max_buffer_time):
+            return True
+        return False
 
 
 class InfluxDBMixin(object):
@@ -59,19 +95,22 @@ class InfluxDBMixin(object):
     """``self.settings`` key that configures this mix-in."""
 
     def initialize(self):
+        super(InfluxDBMixin, self).initialize()
+        if self.SETTINGS_KEY in self.settings:
+            settings = self.settings[self.SETTINGS_KEY]
+            if 'db_connection' not in settings:
+                keys = ('max_buffer_time', 'max_buffer_length')
+                kwargs = {k: settings[k] for k in keys if k in settings}
+                settings['db_connection'] = InfluxDBConnection(
+                    settings['write_url'], settings['database'], **kwargs)
+
+        self.__metrics = []
         self.__tags = {
             'host': socket.gethostname(),
             'handler': '{}.{}'.format(self.__module__,
                                       self.__class__.__name__),
             'method': self.request.method,
         }
-
-        super(InfluxDBMixin, self).initialize()
-        settings = self.settings.setdefault(self.SETTINGS_KEY, {})
-        if 'db_connection' not in settings:
-            settings['db_connection'] = InfluxDBConnection(
-                settings['write_url'], settings['database'])
-        self.__metrics = []
 
     def set_metric_tag(self, tag, value):
         """

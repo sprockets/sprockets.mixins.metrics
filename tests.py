@@ -129,6 +129,7 @@ class InfluxDbTests(testing.AsyncHTTPTestCase):
             'measurement': 'my-service',
             'write_url': self.get_url('/write'),
             'database': 'requests',
+            'max_buffer_length': 0
         }
         logging.getLogger(FakeInfluxHandler.__module__).setLevel(logging.DEBUG)
 
@@ -186,7 +187,7 @@ class InfluxDbTests(testing.AsyncHTTPTestCase):
                 break
         else:
             self.fail('Expected to find "request" metric in {!r}'.format(
-                    list(self.application.influx_db['requests'])))
+                      list(self.application.influx_db['requests'])))
 
     def test_that_cached_db_connection_is_used(self):
         cfg = self.application.settings[metrics.InfluxDBMixin.SETTINGS_KEY]
@@ -208,4 +209,76 @@ class InfluxDbTests(testing.AsyncHTTPTestCase):
                 break
         else:
             self.fail('Expected to find "request" metric in {!r}'.format(
-                    list(self.application.influx_db['requests'])))
+                      list(self.application.influx_db['requests'])))
+
+    def test_metrics_with_buffer_flush_on_max_time(self):
+        max_buffer_time = 1
+        self.application.settings[metrics.InfluxDBMixin.SETTINGS_KEY] = {
+            'measurement': 'my-service',
+            'write_url': self.get_url('/write'),
+            'database': 'requests',
+            'max_buffer_time': max_buffer_time
+        }
+
+        # 2 requests
+        response = self.fetch('/')
+        self.assertEqual(response.code, 204)
+        time.sleep(max_buffer_time+1)
+        response = self.fetch('/')
+        self.assertEqual(response.code, 204)
+        self.assertEqual(2, len(self.influx_messages))
+
+        for key, fields, timestamp in self.influx_messages:
+            if key.startswith('my-service,'):
+                value_dict = dict(a.split('=') for a in fields.split(','))
+                self.assertEqual(int(value_dict['slept']), 42)
+                break
+        else:
+            self.fail('Expected to find "request" metric in {!r}'.format(
+                      list(self.application.influx_db['requests'])))
+
+    def test_metrics_with_buffer_flush_on_max_length(self):
+        max_buffer_length = 2
+        self.application.settings[metrics.InfluxDBMixin.SETTINGS_KEY] = {
+            'measurement': 'my-service',
+            'write_url': self.get_url('/write'),
+            'database': 'requests',
+            'max_buffer_time': 100,
+            'max_buffer_length': max_buffer_length
+        }
+
+        # 3 requests with buffer length = 2,
+        # so only 2 metrics should be flushed
+        response = self.fetch('/')
+        self.assertEqual(response.code, 204)
+        response = self.fetch('/')
+        self.assertEqual(response.code, 204)
+        response = self.fetch('/')
+        self.assertEqual(response.code, 204)
+        self.assertEqual(max_buffer_length, len(self.influx_messages))
+
+        for key, fields, timestamp in self.influx_messages:
+            if key.startswith('my-service,'):
+                value_dict = dict(a.split('=') for a in fields.split(','))
+                self.assertEqual(int(value_dict['slept']), 42)
+                break
+        else:
+            self.fail('Expected to find "request" metric in {!r}'.format(
+                      list(self.application.influx_db['requests'])))
+
+    def test_metrics_with_buffer_not_flush(self):
+        self.application.settings[metrics.InfluxDBMixin.SETTINGS_KEY] = {
+            'measurement': 'my-service',
+            'write_url': self.get_url('/write'),
+            'database': 'requests',
+            'max_buffer_time': 100,
+            'max_buffer_length': 100
+        }
+
+        # 2 requests
+        response = self.fetch('/')
+        self.assertEqual(response.code, 204)
+        response = self.fetch('/')
+        self.assertEqual(response.code, 204)
+        with self.assertRaises(AssertionError):
+            self.assertEqual(0, len(self.influx_messages))

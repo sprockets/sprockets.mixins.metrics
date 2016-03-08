@@ -56,8 +56,8 @@ Development Quickstart
 .. code-block:: bash
 
    $ python3.4 -mvenv env
-   $ env/bin/pip install -r requires/development.txt
    $ . ./env/bin/activate
+   (env)$ env/bin/pip install -r requires/development.txt
    (env)$ nosetests
    test_that_cached_socket_is_used (tests.StatsdMethodTimingTests) ... ok
    test_that_counter_accepts_increment_value (tests.StatsdMethodTimingTests) ... ok
