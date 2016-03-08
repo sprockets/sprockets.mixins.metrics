@@ -186,7 +186,7 @@ class InfluxDbTests(testing.AsyncHTTPTestCase):
                 break
         else:
             self.fail('Expected to find "request" metric in {!r}'.format(
-                    list(self.application.influx_db['requests'])))
+                      list(self.application.influx_db['requests'])))
 
     def test_that_cached_db_connection_is_used(self):
         cfg = self.application.settings[metrics.InfluxDBMixin.SETTINGS_KEY]
@@ -208,4 +208,4 @@ class InfluxDbTests(testing.AsyncHTTPTestCase):
                 break
         else:
             self.fail('Expected to find "request" metric in {!r}'.format(
-                    list(self.application.influx_db['requests'])))
+                      list(self.application.influx_db['requests'])))
