@@ -28,8 +28,13 @@ from using `statsd`_ to `InfluxDB`_ is simply a matter of switch from the
 ``metrics.StatsdMixin`` to the ``metrics.InfluxDBMixin``.
 
 The mix-in is configured through the ``tornado.web.Application`` settings
-property using a key defined by the specific mix-in.  The following snippet
-configures the StatsD mix-in from common environment variables:
+property using a key defined by the specific mix-in.
+
+Statsd Mixin
+------------
+
+The following snippet configures the StatsD mix-in from common environment
+variables:
 
 .. code-block:: python
 
@@ -50,6 +55,46 @@ configures the StatsD mix-in from common environment variables:
            # insert handlers here
        ], **settings)
 
+:namespace: The namespace for the measurements
+:host: The Statsd host
+:port: The Statsd port
+
+InfluxDB Mixin
+--------------
+
+The following snippet configures the InfluxDB mix-in from common environment
+variables:
+
+.. code-block:: python
+
+   import os
+
+   from sprockets.mixins import metrics
+   from tornado import web
+
+   def make_application():
+       settings = {
+           metrics.InfluxDBMixin.SETTINGS_KEY: {
+               'measurement': 'my-application',
+               'database': 'services',
+               'write_url': 'http://{}:{}/write'.format(
+                    os.environ.get('INFLUX_HOST', '127.0.0.1'),
+                    os.environ.get('INFLUX_PORT', 8086)),
+                'max_buffer_time': 3,
+                'max_buffer_length': 100
+           }
+       }
+       return web.Application([
+           # insert handlers here
+       ], **settings)
+
+:measurement: The InfluxDB measurement name
+:database: The InfluxDB database to write measurements into
+:write_url: the InfluxDB write URL to send HTTP requests to
+:max_buffer_time: The maximum elasped time measurements should remain in
+    buffer before writing to InfluxDB.
+:max_buffer_length: The maximum number of measurements to
+    buffer before writing to InfluxDB.
 
 Development Quickstart
 ----------------------
