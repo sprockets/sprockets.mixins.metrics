@@ -3,6 +3,10 @@
 Release History
 ===============
 
+`1.1.1`_ (9-Mar-2016)
+---------------------
+- Fix packaging woes part deux.
+
 `1.1.0`_ (9-Mar-2016)
 ---------------------
 - Update InfluxDB mixin to buffer measurements across requests based on a max time and/or length.
@@ -24,7 +28,8 @@ Release History
 - Add :class:`sprockets.mixins.metrics.InfluxDBMixin`
 - Add :class:`sprockets.mixins.metrics.influxdb.InfluxDBConnection`
 
-.. _Next Release: https://github.com/sprockets/sprockets.mixins.metrics/compare/1.1.0...master
+.. _Next Release: https://github.com/sprockets/sprockets.mixins.metrics/compare/1.1.1...master
+.. _1.1.1: https://github.com/sprockets/sprockets.mixins.metrics/compare/1.1.0...1.1.1
 .. _1.1.0: https://github.com/sprockets/sprockets.mixins.metrics/compare/1.0.1...1.1.0
 .. _1.0.1: https://github.com/sprockets/sprockets.mixins.metrics/compare/1.0.0...1.0.1
 .. _1.0.0: https://github.com/sprockets/sprockets.mixins.metrics/compare/0.9.0...1.0.0
