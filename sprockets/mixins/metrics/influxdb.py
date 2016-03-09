@@ -26,13 +26,20 @@ class InfluxDBConnection(object):
 
     """
 
+    MAX_BUFFER_TIME = 5
+    MAX_BUFFER_LENGTH = 100
+
     def __init__(self, write_url, database, io_loop=None,
-                 max_buffer_time=5, max_buffer_length=100):
+                 max_buffer_time=None, max_buffer_length=None):
         self.io_loop = ioloop.IOLoop.instance() if io_loop is None else io_loop
         self.client = httpclient.AsyncHTTPClient()
         self.write_url = '{}?db={}'.format(write_url, database)
 
         self._buffer = []
+        if max_buffer_time is None:
+            max_buffer_time = self.MAX_BUFFER_TIME
+        if max_buffer_length is None:
+            max_buffer_length = self.MAX_BUFFER_LENGTH
         self._max_buffer_time = float(max_buffer_time)
         self._max_buffer_length = int(max_buffer_length)
         self._last_write = self.io_loop.time()
@@ -96,10 +103,10 @@ class InfluxDBMixin(object):
         if self.SETTINGS_KEY in self.settings:
             settings = self.settings[self.SETTINGS_KEY]
             if 'db_connection' not in settings:
-                keys = ('max_buffer_time', 'max_buffer_length')
-                kwargs = {k: settings[k] for k in keys if k in settings}
                 settings['db_connection'] = InfluxDBConnection(
-                    settings['write_url'], settings['database'], **kwargs)
+                    settings['write_url'], settings['database'],
+                    max_buffer_time=settings.get('max_buffer_time'),
+                    max_buffer_length=settings.get('max_buffer_length'))
 
         self.__metrics = []
         self.__tags = {
