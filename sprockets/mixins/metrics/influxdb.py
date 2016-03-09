@@ -26,9 +26,6 @@ class InfluxDBConnection(object):
 
     """
 
-    MAX_BUFFER_TIME = 5
-    MAX_BUFFER_LENGTH = 100
-
     def __init__(self, write_url, database, io_loop=None,
                  max_buffer_time=5, max_buffer_length=100):
         self.io_loop = ioloop.IOLoop.instance() if io_loop is None else io_loop

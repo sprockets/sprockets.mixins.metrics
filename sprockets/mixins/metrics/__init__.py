@@ -8,6 +8,6 @@ except ImportError as error:
     def StatsdMixin(*args, **kwargs):
         raise error
 
-version_info = (1, 0, 1)
+version_info = (1, 1, 0)
 __version__ = '.'.join(str(v) for v in version_info)
 __all__ = ['__version__', 'version_info', 'InfluxDBMixin', 'StatsdMixin']
