@@ -127,7 +127,6 @@ class InfluxDBCollector(object):
                  io_loop=None, submission_interval=SUBMISSION_INTERVAL,
                  max_batch_size=MAX_BATCH_SIZE, tags=None):
         self._buffer = list()
-        self._client = httpclient.AsyncHTTPClient(force_instance=True)
         self._client.configure(None, defaults={'user_agent': _USER_AGENT})
         self._database = database
         self._influxdb_url = '{}?db={}'.format(url, database)
@@ -136,6 +135,9 @@ class InfluxDBCollector(object):
         self._max_batch_size = max_batch_size or self.MAX_BATCH_SIZE
         self._pending = 0
         self._tags = tags or {}
+
+        self._client = httpclient.AsyncHTTPClient(force_instance=True,
+                                                  io_loop=self._io_loop)
 
         # Add the periodic callback for submitting metrics
         LOGGER.info('Starting PeriodicCallback for writing InfluxDB metrics')
