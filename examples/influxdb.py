@@ -1,11 +1,10 @@
-import os
 import signal
 
-from sprockets.mixins import metrics
+from sprockets.mixins.metrics import influxdb
 from tornado import concurrent, gen, ioloop, web
 
 
-class SimpleHandler(metrics.InfluxDBMixin, web.RequestHandler):
+class SimpleHandler(influxdb.InfluxDBMixin, web.RequestHandler):
     """
     Simply emits a few metrics around the GET method.
 
@@ -65,17 +64,14 @@ def make_application():
     by the ``service`` setting.
 
     """
-    influx_url = 'http://{}:{}/write'.format(
-        os.environ.get('INFLUX_HOST', '127.0.0.1'),
-        os.environ.get('INFLUX_PORT', 8086))
     settings = {
-        metrics.InfluxDBMixin.SETTINGS_KEY: {
-            'measurement': 'cli',
-            'database': 'testing',
-            'write_url': influx_url,
+        influxdb.SETTINGS_KEY: {
+            'measurement': 'example',
         }
     }
-    return web.Application([web.url('/', SimpleHandler)], **settings)
+    application = web.Application([web.url('/', SimpleHandler)], **settings)
+    influxdb.install(application, **{'database': 'testing'})
+    return application
 
 
 if __name__ == '__main__':

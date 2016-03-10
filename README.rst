@@ -1,14 +1,41 @@
 sprockets.mixins.metrics
 ========================
-Adjust counter and timer metrics in InfluxDB or Graphite using the same API.
+Adjust counter and timer metrics in `InfluxDB`_ or `StatsD`_ using the same API.
+
+The mix-in is configured through the ``tornado.web.Application`` settings
+property using a key defined by the specific mix-in.
+
+Statsd Mixin
+------------
+
+The following snippet configures the StatsD mix-in from common environment
+variables. This simple handler will emit a timer metric that identifies each
+call to the ``get`` method as well as a separate metric for the database query.
 
 .. code-block:: python
 
-   from sprockets.mixins import mediatype, metrics
+   import os
+
+   from sprockets.mixins import mediatype
+   from sprockets.mixins.metrics import statsd
+   from tornado import web
    from tornado import gen, web
    import queries
 
-   class MyHandler(metrics.StatsdMixin, mediatype.ContentMixin,
+   def make_application():
+       settings = {
+           statsd.SETTINGS_KEY: {
+               'namespace': 'my-application',
+               'host': os.environ.get('STATSD_HOST', '127.0.0.1'),
+               'port': os.environ.get('STATSD_PORT', '8125'),
+           }
+       }
+       return web.Application([
+           # insert handlers here
+       ], **settings)
+
+   class MyHandler(statsd.StatsdMixin,
+                   mediatype.ContentMixin,
                    web.RequestHandler):
 
        def initialize(self):
@@ -22,38 +49,8 @@ Adjust counter and timer metrics in InfluxDB or Graphite using the same API.
                                            obj_id)
            self.send_response(result)
 
-This simple handler will emit a timer metric that identifies each call to the
-``get`` method as well as a separate metric for the database query.  Switching
-from using `statsd`_ to `InfluxDB`_ is simply a matter of switch from the
-``metrics.StatsdMixin`` to the ``metrics.InfluxDBMixin``.
-
-The mix-in is configured through the ``tornado.web.Application`` settings
-property using a key defined by the specific mix-in.
-
-Statsd Mixin
-------------
-
-The following snippet configures the StatsD mix-in from common environment
-variables:
-
-.. code-block:: python
-
-   import os
-
-   from sprockets.mixins import metrics
-   from tornado import web
-
-   def make_application():
-       settings = {
-           metrics.StatsdMixin.SETTINGS_KEY: {
-               'namespace': 'my-application',
-               'host': os.environ.get('STATSD_HOST', '127.0.0.1'),
-               'port': os.environ.get('STATSD_PORT', '8125'),
-           }
-       }
-       return web.Application([
-           # insert handlers here
-       ], **settings)
+Settings
+^^^^^^^^
 
 :namespace: The namespace for the measurements
 :host: The Statsd host
@@ -69,32 +66,55 @@ variables:
 
    import os
 
-   from sprockets.mixins import metrics
-   from tornado import web
+   from sprockets.mixins.metrics import influxdb
+   from sprockets.mixins import postgresql
+   from tornado import gen, web
 
-   def make_application():
-       settings = {
-           metrics.InfluxDBMixin.SETTINGS_KEY: {
-               'measurement': 'my-application',
-               'database': 'services',
-               'write_url': 'http://{}:{}/write'.format(
-                    os.environ.get('INFLUX_HOST', '127.0.0.1'),
-                    os.environ.get('INFLUX_PORT', 8086)),
-                'max_buffer_time': 3,
-                'max_buffer_length': 100
-           }
+   def make_app(**settings):
+       settings[influxdb.SETTINGS_KEY] = {
+           'measurement': 'rollup',
        }
-       return web.Application([
-           # insert handlers here
-       ], **settings)
 
-:measurement: The InfluxDB measurement name
-:database: The InfluxDB database to write measurements into
-:write_url: the InfluxDB write URL to send HTTP requests to
-:max_buffer_time: The maximum elasped time measurements should remain in
-    buffer before writing to InfluxDB.
-:max_buffer_length: The maximum number of measurements to
-    buffer before writing to InfluxDB.
+       application = web.Application(
+           [
+               web.url(r'/', RequestHandler),
+           ], **settings)
+
+       influxdb.install({'url': 'http://localhost:8086',
+                         'database': 'tornado-app'})
+       return application
+
+
+   class MyHandler(influxdb.InfluxDBMixin,
+                   postgresql.HandlerMixin,
+                   web.RequestHandler):
+
+       @gen.coroutine
+       def get(self, obj_id):
+           with self.execution_timer('dbquery', 'get'):
+              result = yield self.postgresql_session.query(
+                  'SELECT * FROM foo WHERE id=%s', obj_id)
+           self.send_response(result)
+
+If your application handles signal handling for shutdowns, the
+:meth:`~sprockets.mixins.influxdb.shutdown` method will try to cleanly ensure
+that any buffered metrics in the InfluxDB collector are written prior to
+shutting down. The method returns a :cls:`~tornado.concurrent.TracebackFuture`
+that should be waited on prior to shutting down.
+
+Settings
+^^^^^^^^
+
+:url: The InfluxDB API URL
+:database: the database to write measurements into
+:submission_interval: How often to submit metric batches in
+   milliseconds. Default: ``5000``
+:max_batch_size: The number of measurements to be submitted in a
+   single HTTP request. Default: ``1000``
+:tags: Default tags that are to be submitted with each metric. The tag
+   ``hostname`` is added by default along with ``environment`` and ``service``
+   if the corresponding ``ENVIRONMENT`` or ``SERVICE`` environment variables
+   are set.
 
 Development Quickstart
 ----------------------
@@ -104,6 +124,13 @@ Development Quickstart
    $ . ./env/bin/activate
    (env)$ env/bin/pip install -r requires/development.txt
    (env)$ nosetests
+   test_metrics_with_buffer_not_flush (tests.InfluxDbTests) ... ok
+   test_that_cached_db_connection_is_used (tests.InfluxDbTests) ... ok
+   test_that_counter_is_tracked (tests.InfluxDbTests) ... ok
+   test_that_execution_timer_is_tracked (tests.InfluxDbTests) ... ok
+   test_that_http_method_call_details_are_recorded (tests.InfluxDbTests) ... ok
+   test_that_metric_tag_is_tracked (tests.InfluxDbTests) ... ok
+   test_that_add_metric_tag_is_ignored (tests.StatsdMethodTimingTests) ... ok
    test_that_cached_socket_is_used (tests.StatsdMethodTimingTests) ... ok
    test_that_counter_accepts_increment_value (tests.StatsdMethodTimingTests) ... ok
    test_that_counter_increment_defaults_to_one (tests.StatsdMethodTimingTests) ... ok
@@ -112,12 +139,12 @@ Development Quickstart
    test_that_http_method_call_is_recorded (tests.StatsdMethodTimingTests) ... ok
 
    ----------------------------------------------------------------------
-   Ran 6 tests in 1.089s
+   Ran 13 tests in 3.572s
 
    OK
    (env)$ ./setup.py build_sphinx -q
    running build_sphinx
    (env)$ open build/sphinx/html/index.html
 
-.. _statsd: https://github.com/etsy/statsd
+.. _StatsD: https://github.com/etsy/statsd
 .. _InfluxDB: https://influxdata.com

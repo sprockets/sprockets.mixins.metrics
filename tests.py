@@ -6,26 +6,23 @@ import uuid
 from tornado import gen, testing, web
 import mock
 
-from sprockets.mixins import metrics
-from sprockets.mixins.metrics.testing import (
-    FakeInfluxHandler, FakeStatsdServer)
+from sprockets.mixins.metrics import influxdb, statsd
+from sprockets.mixins.metrics.testing import FakeInfluxHandler, FakeStatsdServer
 import examples.influxdb
 import examples.statsd
 
 
-class CounterBumper(metrics.StatsdMixin, web.RequestHandler):
+class CounterBumper(statsd.StatsdMixin, web.RequestHandler):
 
     @gen.coroutine
-    def get(self, counter, time):
-        path = counter.split('.')
-        with self.execution_timer(*path):
-            yield gen.sleep(float(time))
+    def get(self, counter, value):
+        with self.execution_timer(*counter.split('.')):
+            yield gen.sleep(float(value))
         self.set_status(204)
         self.finish()
 
     def post(self, counter, amount):
-        path = counter.split('.')
-        self.increase_counter(*path, amount=int(amount))
+        self.increase_counter(*counter.split('.'), amount=int(amount))
         self.set_status(204)
 
 
@@ -48,7 +45,7 @@ class StatsdMethodTimingTests(testing.AsyncHTTPTestCase):
         self.application = None
         super(StatsdMethodTimingTests, self).setUp()
         self.statsd = FakeStatsdServer(self.io_loop)
-        self.application.settings[metrics.StatsdMixin.SETTINGS_KEY] = {
+        self.application.settings[statsd.SETTINGS_KEY] = {
             'host': self.statsd.sockaddr[0],
             'port': self.statsd.sockaddr[1],
             'namespace': 'testing',
@@ -60,7 +57,7 @@ class StatsdMethodTimingTests(testing.AsyncHTTPTestCase):
 
     @property
     def settings(self):
-        return self.application.settings[metrics.StatsdMixin.SETTINGS_KEY]
+        return self.application.settings[statsd.SETTINGS_KEY]
 
     def test_that_http_method_call_is_recorded(self):
         response = self.fetch('/')
@@ -120,23 +117,28 @@ class InfluxDbTests(testing.AsyncHTTPTestCase):
             web.url(r'/', examples.influxdb.SimpleHandler),
             web.url(r'/write', FakeInfluxHandler),
         ])
+        influxdb.install(self.application, **{'database': 'requests',
+                                              'submission_interval': 1,
+                                              'url': self.get_url('/write')})
+        self.application.influx_db = {}
         return self.application
 
     def setUp(self):
         self.application = None
         super(InfluxDbTests, self).setUp()
-        self.application.settings[metrics.InfluxDBMixin.SETTINGS_KEY] = {
-            'measurement': 'my-service',
-            'write_url': self.get_url('/write'),
-            'database': 'requests',
-            'max_buffer_length': 0
+        self.application.settings[influxdb.SETTINGS_KEY] = {
+            'measurement': 'my-service'
         }
         logging.getLogger(FakeInfluxHandler.__module__).setLevel(logging.DEBUG)
 
+    @gen.coroutine
+    def tearDown(self):
+        yield influxdb.shutdown(self.application)
+        super(InfluxDbTests, self).tearDown()
+
     @property
     def influx_messages(self):
-        return FakeInfluxHandler.get_messages(self.application,
-                                              'requests', self)
+        return FakeInfluxHandler.get_messages(self.application, self)
 
     def test_that_http_method_call_details_are_recorded(self):
         start = int(time.time())
@@ -149,7 +151,7 @@ class InfluxDbTests(testing.AsyncHTTPTestCase):
                 self.assertEqual(tag_dict['handler'],
                                  'examples.influxdb.SimpleHandler')
                 self.assertEqual(tag_dict['method'], 'GET')
-                self.assertEqual(tag_dict['host'], socket.gethostname())
+                self.assertEqual(tag_dict['hostname'], socket.gethostname())
                 self.assertEqual(tag_dict['status_code'], '204')
 
                 value_dict = dict(a.split('=') for a in fields.split(','))
@@ -190,7 +192,7 @@ class InfluxDbTests(testing.AsyncHTTPTestCase):
                       list(self.application.influx_db['requests'])))
 
     def test_that_cached_db_connection_is_used(self):
-        cfg = self.application.settings[metrics.InfluxDBMixin.SETTINGS_KEY]
+        cfg = self.application.settings[influxdb.SETTINGS_KEY]
         conn = mock.Mock()
         cfg['db_connection'] = conn
         response = self.fetch('/')
@@ -211,68 +213,9 @@ class InfluxDbTests(testing.AsyncHTTPTestCase):
             self.fail('Expected to find "request" metric in {!r}'.format(
                       list(self.application.influx_db['requests'])))
 
-    def test_metrics_with_buffer_flush_on_max_time(self):
-        max_buffer_time = 1
-        self.application.settings[metrics.InfluxDBMixin.SETTINGS_KEY] = {
-            'measurement': 'my-service',
-            'write_url': self.get_url('/write'),
-            'database': 'requests',
-            'max_buffer_time': max_buffer_time
-        }
-
-        # 2 requests
-        response = self.fetch('/')
-        self.assertEqual(response.code, 204)
-        time.sleep(max_buffer_time+1)
-        response = self.fetch('/')
-        self.assertEqual(response.code, 204)
-        self.assertEqual(2, len(self.influx_messages))
-
-        for key, fields, timestamp in self.influx_messages:
-            if key.startswith('my-service,'):
-                value_dict = dict(a.split('=') for a in fields.split(','))
-                self.assertEqual(int(value_dict['slept']), 42)
-                break
-        else:
-            self.fail('Expected to find "request" metric in {!r}'.format(
-                      list(self.application.influx_db['requests'])))
-
-    def test_metrics_with_buffer_flush_on_max_length(self):
-        max_buffer_length = 2
-        self.application.settings[metrics.InfluxDBMixin.SETTINGS_KEY] = {
-            'measurement': 'my-service',
-            'write_url': self.get_url('/write'),
-            'database': 'requests',
-            'max_buffer_time': 100,
-            'max_buffer_length': max_buffer_length
-        }
-
-        # 3 requests with buffer length = 2,
-        # so only 2 metrics should be flushed
-        response = self.fetch('/')
-        self.assertEqual(response.code, 204)
-        response = self.fetch('/')
-        self.assertEqual(response.code, 204)
-        response = self.fetch('/')
-        self.assertEqual(response.code, 204)
-        self.assertEqual(max_buffer_length, len(self.influx_messages))
-
-        for key, fields, timestamp in self.influx_messages:
-            if key.startswith('my-service,'):
-                value_dict = dict(a.split('=') for a in fields.split(','))
-                self.assertEqual(int(value_dict['slept']), 42)
-                break
-        else:
-            self.fail('Expected to find "request" metric in {!r}'.format(
-                      list(self.application.influx_db['requests'])))
-
     def test_metrics_with_buffer_not_flush(self):
-        self.application.settings[metrics.InfluxDBMixin.SETTINGS_KEY] = {
-            'measurement': 'my-service',
-            'write_url': self.get_url('/write'),
-            'database': 'requests',
-            'max_buffer_time': 100,
-            'max_buffer_length': 100
+        self.application.settings[influxdb] = {
+            'measurement': 'my-service'
         }
 
         # 2 requests
