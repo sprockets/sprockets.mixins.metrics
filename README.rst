@@ -18,7 +18,6 @@ call to the ``get`` method as well as a separate metric for the database query.
 
    from sprockets.mixins import mediatype
    from sprockets.mixins.metrics import statsd
-   from tornado import web
    from tornado import gen, web
    import queries
 
