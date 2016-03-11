@@ -2,6 +2,9 @@ import contextlib
 import socket
 import time
 
+SETTINGS_KEY = 'sprockets.mixins.metrics.statsd'
+"""``self.settings`` key that configures this mix-in."""
+
 
 class StatsdMixin(object):
     """
@@ -22,13 +25,9 @@ class StatsdMixin(object):
         this defaults to ``8125``.
 
     """
-
-    SETTINGS_KEY = 'sprockets.mixins.metrics.statsd'
-    """``self.settings`` key that configures this mix-in."""
-
     def initialize(self):
         super(StatsdMixin, self).initialize()
-        settings = self.settings.setdefault(self.SETTINGS_KEY, {})
+        settings = self.settings.setdefault(SETTINGS_KEY, {})
         if 'socket' not in settings:
             sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM, 0)
             settings['socket'] = sock
@@ -97,8 +96,7 @@ class StatsdMixin(object):
         try:
             yield
         finally:
-            fini = max(start, time.time())
-            self.record_timing(fini - start, *path)
+            self.record_timing(max(start, time.time()) - start, *path)
 
     def on_finish(self):
         """
@@ -119,12 +117,12 @@ class StatsdMixin(object):
 
     def _build_path(self, path):
         """Return a normalized path."""
-        return '{}.{}'.format(self.settings[self.SETTINGS_KEY]['namespace'],
+        return '{}.{}'.format(self.settings[SETTINGS_KEY]['namespace'],
                               '.'.join(str(p).replace('.', '-') for p in path))
 
     def _send(self, path, value, stat_type):
         """Send a metric to Statsd."""
-        settings = self.settings[self.SETTINGS_KEY]
+        settings = self.settings[SETTINGS_KEY]
         msg = '{0}:{1}|{2}'.format(path, value, stat_type)
         settings['socket'].sendto(msg.encode('ascii'),
                                   (settings['host'], int(settings['port'])))

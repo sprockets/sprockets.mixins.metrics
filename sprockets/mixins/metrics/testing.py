@@ -1,9 +1,10 @@
-import collections
 import logging
 import re
 import socket
 
 from tornado import gen, web
+
+from sprockets.mixins.metrics import influxdb
 
 
 LOGGER = logging.getLogger(__name__)
@@ -124,12 +125,13 @@ class FakeInfluxHandler(web.RequestHandler):
                    # inspect measurements
 
     """
-
     def initialize(self):
         super(FakeInfluxHandler, self).initialize()
         self.logger = LOGGER.getChild(__name__)
         if not hasattr(self.application, 'influx_db'):
-            self.application.influx_db = collections.defaultdict(list)
+            self.application.influx_db = {}
+        if self.application.influxdb.database not in self.application.influx_db:
+            self.application.influx_db[self.application.influxdb.database] = []
 
     def post(self):
         db = self.get_query_argument('db')
@@ -141,7 +143,7 @@ class FakeInfluxHandler(web.RequestHandler):
         self.set_status(204)
 
     @staticmethod
-    def get_messages(application, database, test_case):
+    def get_messages(application, test_case):
         """
         Wait for measurements to show up and return them.
 
@@ -161,10 +163,10 @@ class FakeInfluxHandler(web.RequestHandler):
         are not received in a reasonable number of runs.
 
         """
-        for _ in range(0, 10):
+        for _ in range(0, 15):
             if hasattr(application, 'influx_db'):
-                if application.influx_db[database]:
-                    return application.influx_db[database]
+                if application.influx_db.get(application.influxdb.database):
+                    return application.influx_db[application.influxdb.database]
             test_case.io_loop.add_future(gen.sleep(0.1),
                                          lambda _: test_case.stop())
             test_case.wait()

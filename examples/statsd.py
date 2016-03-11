@@ -1,10 +1,10 @@
 import signal
 
-from sprockets.mixins import metrics
+from sprockets.mixins.metrics import statsd
 from tornado import concurrent, gen, ioloop, web
 
 
-class SimpleHandler(metrics.StatsdMixin, web.RequestHandler):
+class SimpleHandler(statsd.StatsdMixin, web.RequestHandler):
     """
     Simply emits a timing metric around the method call.
 
@@ -53,7 +53,7 @@ def make_application():
 
     """
     settings = {
-        metrics.StatsdMixin.SETTINGS_KEY: {
+        statsd.SETTINGS_KEY: {
             'namespace': 'webapps',
             'host': '127.0.0.1',
             'port': 8125,
