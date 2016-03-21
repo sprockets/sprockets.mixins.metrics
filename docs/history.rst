@@ -3,6 +3,12 @@
 Release History
 ===============
 
+`Next Release`_
+---------------
+- Make it possible to call methods (e.g.,
+  :meth:`~sprockets.mixins.metrics.influxdb.InfluxDBMixin.set_metric_tag`)
+  during the Tornado request handler initialization phase.
+
 `2.0.0`_ (11-Mar-2016)
 ----------------------
 - Rework InfluxDB buffering to use a periodic callback instead of flushing
