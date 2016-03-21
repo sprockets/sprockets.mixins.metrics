@@ -3,8 +3,8 @@
 Release History
 ===============
 
-`Next Release`_
----------------
+`2.0.1`_ (21-Mar-2016)
+----------------------
 - Make it possible to call methods (e.g.,
   :meth:`~sprockets.mixins.metrics.influxdb.InfluxDBMixin.set_metric_tag`)
   during the Tornado request handler initialization phase.
@@ -40,7 +40,8 @@ Release History
 - Add :class:`sprockets.mixins.metrics.InfluxDBMixin`
 - Add :class:`sprockets.mixins.metrics.influxdb.InfluxDBConnection`
 
-.. _Next Release: https://github.com/sprockets/sprockets.mixins.metrics/compare/2.0.0...master
+.. _Next Release: https://github.com/sprockets/sprockets.mixins.metrics/compare/2.0.1...master
+.. _2.0.1: https://github.com/sprockets/sprockets.mixins.metrics/compare/2.0.0...2.0.1
 .. _2.0.0: https://github.com/sprockets/sprockets.mixins.metrics/compare/1.1.1...2.0.0
 .. _1.1.1: https://github.com/sprockets/sprockets.mixins.metrics/compare/1.1.0...1.1.1
 .. _1.1.0: https://github.com/sprockets/sprockets.mixins.metrics/compare/1.0.1...1.1.0
