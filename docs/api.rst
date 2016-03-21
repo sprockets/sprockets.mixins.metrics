@@ -56,15 +56,15 @@ implements the same interface:
 
 Statsd Implementation
 ---------------------
-.. autoclass:: sprockets.mixins.metrics.StatsdMixin
+.. autoclass:: sprockets.mixins.metrics.statsd.StatsdMixin
    :members:
 
 InfluxDB Implementation
 -----------------------
-.. autoclass:: sprockets.mixins.metrics.InfluxDBMixin
+.. autoclass:: sprockets.mixins.metrics.influxdb.InfluxDBMixin
    :members:
 
-.. autoclass:: sprockets.mixins.metrics.influxdb.InfluxDBConnection
+.. autoclass:: sprockets.mixins.metrics.influxdb.InfluxDBCollector
    :members:
 
 Testing Helpers

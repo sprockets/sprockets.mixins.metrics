@@ -31,6 +31,10 @@ class SimpleHandler(influxdb.InfluxDBMixin, web.RequestHandler):
 
     """
 
+    def initialize(self):
+        super(SimpleHandler, self).initialize()
+        self.set_metric_tag('environment', 'testing')
+
     @gen.coroutine
     def prepare(self):
         maybe_future = super(SimpleHandler, self).prepare()

@@ -20,13 +20,17 @@ class InfluxDBMixin(object):
     """Mix this class in to record measurements to a InfluxDB server."""
 
     def __init__(self, application, request, **kwargs):
-        super(InfluxDBMixin, self).__init__(application, request, **kwargs)
         self.__metrics = []
         self.__tags = {
             'handler': '{}.{}'.format(self.__module__,
                                       self.__class__.__name__),
             'method': request.method,
         }
+
+        # Call to super().__init__() needs to be *AFTER* we create our
+        # properties since it calls initialize() which may want to call
+        # methods like ``set_metric_tag``
+        super(InfluxDBMixin, self).__init__(application, request, **kwargs)
 
     def set_metric_tag(self, tag, value):
         """
