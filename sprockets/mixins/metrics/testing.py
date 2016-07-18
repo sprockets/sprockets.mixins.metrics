@@ -4,9 +4,6 @@ import socket
 
 from tornado import gen, web
 
-from sprockets.mixins.metrics import influxdb
-
-
 LOGGER = logging.getLogger(__name__)
 STATS_PATTERN = re.compile(r'(?P<path>[^:]*):(?P<value>[^|]*)\|(?P<type>.*)$')
 
@@ -36,7 +33,7 @@ class FakeStatsdServer(object):
     def __init__(self, iol):
         self.socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM,
                                     socket.IPPROTO_UDP)
-        self.socket.bind(('127.0.0.1', 0))
+        self.socket.bind(('127.0.0.1', 8125))
         self.sockaddr = self.socket.getsockname()
         self.datagrams = []
 

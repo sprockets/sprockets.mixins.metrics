@@ -52,14 +52,10 @@ def make_application():
         webapps.SimpleHandler.GET.204:255.24497032165527|ms
 
     """
-    settings = {
-        statsd.SETTINGS_KEY: {
-            'namespace': 'webapps',
-            'host': '127.0.0.1',
-            'port': 8125,
-        }
-    }
-    return web.Application([web.url('/', SimpleHandler)], **settings)
+    settings = {}
+    application = web.Application([web.url('/', SimpleHandler)], **settings)
+    statsd.install(application, **{'namespace': 'testing'})
+    return application
 
 
 if __name__ == '__main__':
