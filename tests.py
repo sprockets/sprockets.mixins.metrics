@@ -58,7 +58,7 @@ class StatsdMetricCollectionTests(testing.AsyncHTTPTestCase):
         self.assertEqual(response.code, 204)
 
         expected = 'testing.timers.{}.SimpleHandler.GET.204'.format(
-            socket.gethostname())
+            socket.gethostname().replace('.', '-'))
         for path, value, stat_type in self.statsd.find_metrics(expected, 'ms'):
             assert_between(250.0, float(value), 500.0)
 
@@ -67,7 +67,7 @@ class StatsdMetricCollectionTests(testing.AsyncHTTPTestCase):
         self.assertEqual(response.code, 204)
 
         prefix = 'testing.counters.{}.request.path'.format(
-            socket.gethostname())
+            socket.gethostname().replace('.', '-'))
         for path, value, stat_type in self.statsd.find_metrics(prefix, 'c'):
             self.assertEqual(int(value), 1)
 
@@ -76,7 +76,7 @@ class StatsdMetricCollectionTests(testing.AsyncHTTPTestCase):
         self.assertEqual(response.code, 204)
 
         prefix = 'testing.counters.{}.path'.format(
-            socket.gethostname())
+            socket.gethostname().replace('.', '-'))
         for path, value, stat_type in self.statsd.find_metrics(prefix, 'c'):
             self.assertEqual(int(value), 5)
 
@@ -85,7 +85,7 @@ class StatsdMetricCollectionTests(testing.AsyncHTTPTestCase):
         self.assertEqual(response.code, 204)
 
         prefix = 'testing.timers.{}.one.two.three'.format(
-            socket.gethostname())
+            socket.gethostname().replace('.', '-'))
         for path, value, stat_type in self.statsd.find_metrics(prefix, 'ms'):
             assert_between(250.0, float(value), 300.0)
 

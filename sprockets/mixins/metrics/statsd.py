@@ -162,7 +162,8 @@ class StatsDCollector(object):
 
         """
         path = self._get_prefixes(metric_type) + list(path)
-        return '{}.{}'.format(self._namespace, '.'.join(str(p) for p in path))
+        return '{}.{}'.format(self._namespace,
+                              '.'.join(str(p).replace('.', '-') for p in path))
 
     def _get_prefixes(self, metric_type):
         """Get prefixes where applicable
