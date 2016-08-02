@@ -194,7 +194,7 @@ def install(application, **kwargs):
         and :data:`False` otherwise.
 
     - **host** The StatsD host. If host is not specified, the
-        ``STATS_HOST`` environment variable, or default `27.0.0.1`,
+        ``STATSD_HOST`` environment variable, or default `127.0.0.1`,
         will be pass into the :class:`StatsDCollector`.
     - **port** The StatsD port. If port is not specified, the
         ``STATSD_PORT`` environment variable, or default `8125`,
