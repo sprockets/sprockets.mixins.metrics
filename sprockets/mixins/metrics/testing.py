@@ -33,7 +33,7 @@ class FakeStatsdServer(object):
     def __init__(self, iol):
         self.socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM,
                                     socket.IPPROTO_UDP)
-        self.socket.bind(('127.0.0.1', 8125))
+        self.socket.bind(('127.0.0.1', 0))
         self.sockaddr = self.socket.getsockname()
         self.datagrams = []
 

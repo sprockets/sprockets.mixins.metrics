@@ -41,13 +41,15 @@ class StatsdMetricCollectionTests(testing.AsyncHTTPTestCase):
             web.url('/', examples.statsd.SimpleHandler),
             web.url('/counters/(.*)/([.0-9]*)', CounterBumper),
         ])
-        statsd.install(self.application, **{'namespace': 'testing'})
         return self.application
 
     def setUp(self):
         self.application = None
         super(StatsdMetricCollectionTests, self).setUp()
         self.statsd = FakeStatsdServer(self.io_loop)
+        statsd.install(self.application, **{'namespace': 'testing',
+                                            'host': self.statsd.sockaddr[0],
+                                            'port': self.statsd.sockaddr[1]})
 
     def tearDown(self):
         self.statsd.close()
@@ -102,15 +104,18 @@ class StatsdConfigurationTests(testing.AsyncHTTPTestCase):
             web.url('/', examples.statsd.SimpleHandler),
             web.url('/counters/(.*)/([.0-9]*)', CounterBumper),
         ])
-        statsd.install(self.application, **{'namespace': 'testing',
-                                            'prepend_metric_type': False,
-                                            'prepend_hostname': False})
         return self.application
 
     def setUp(self):
         self.application = None
         super(StatsdConfigurationTests, self).setUp()
         self.statsd = FakeStatsdServer(self.io_loop)
+
+        statsd.install(self.application, **{'namespace': 'testing',
+                                            'host': self.statsd.sockaddr[0],
+                                            'port': self.statsd.sockaddr[1],
+                                            'prepend_metric_type': False,
+                                            'prepend_hostname': False})
 
     def tearDown(self):
         self.statsd.close()
