@@ -101,6 +101,10 @@ that any buffered metrics in the InfluxDB collector are written prior to
 shutting down. The method returns a :cls:`~tornado.concurrent.TracebackFuture`
 that should be waited on prior to shutting down.
 
+To use authentication with InfluxDB, set the ``INFLUX_USER`` and the
+``INFLUX_PASSWORD`` environment variables. Once installed, the
+``INFLUX_PASSWORD`` value will be masked in the Python process.
+
 Settings
 ^^^^^^^^
 

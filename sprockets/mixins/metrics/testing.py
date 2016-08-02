@@ -139,7 +139,8 @@ class FakeInfluxHandler(web.RequestHandler):
         for line in payload.splitlines():
             self.logger.debug('received "%s"', line)
             key, fields, timestamp = line.split()
-            self.application.influx_db[db].append((key, fields, timestamp))
+            self.application.influx_db[db].append((key, fields, timestamp,
+                                                   self.request.headers))
         self.set_status(204)
 
     @staticmethod

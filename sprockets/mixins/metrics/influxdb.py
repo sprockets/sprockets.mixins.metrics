@@ -115,6 +115,8 @@ class InfluxDBCollector(object):
     :param max_batch_size: The number of measurements to be submitted in a
         single HTTP request. Default: ``1000``
     :param dict tags: Default tags that are to be submitted with each metric.
+    :param str auth_username: Optional username for authenticated requests.
+    :param str auth_password: Optional password for authenticated requests.
 
     This class should be constructed using the
     :meth:`~sprockets.mixins.influxdb.install` method. When installed, it is
@@ -129,7 +131,8 @@ class InfluxDBCollector(object):
 
     def __init__(self, url='http://localhost:8086', database='sprockets',
                  io_loop=None, submission_interval=SUBMISSION_INTERVAL,
-                 max_batch_size=MAX_BATCH_SIZE, tags=None):
+                 max_batch_size=MAX_BATCH_SIZE, tags=None,
+                 auth_username=None, auth_password=None):
         self._buffer = list()
         self._database = database
         self._influxdb_url = '{}?db={}'.format(url, database)
@@ -139,9 +142,17 @@ class InfluxDBCollector(object):
         self._pending = 0
         self._tags = tags or {}
 
+        # Configure the default
+        defaults = {'user_agent': _USER_AGENT}
+        if auth_username and auth_password:
+            LOGGER.debug('Adding authentication info to defaults (%s)',
+                         auth_username)
+            defaults['auth_username'] = auth_username
+            defaults['auth_password'] = auth_password
+
         self._client = httpclient.AsyncHTTPClient(force_instance=True,
+                                                  defaults=defaults,
                                                   io_loop=self._io_loop)
-        self._client.configure(None, defaults={'user_agent': _USER_AGENT})
 
         # Add the periodic callback for submitting metrics
         LOGGER.info('Starting PeriodicCallback for writing InfluxDB metrics')
@@ -296,6 +307,11 @@ def install(application, **kwargs):
     - **max_batch_size** The number of measurements to be submitted in a
         single HTTP request. Default: ``1000``
     - **tags** Default tags that are to be submitted with each metric.
+    - **auth_username** A username to use for InfluxDB authentication
+    - **auth_password** A password to use for InfluxDB authentication
+
+    If ``auth_password`` is specified as an environment variable, it will be
+    masked in the Python process.
 
     """
     if getattr(application, 'influxdb', None) is not None:
@@ -315,6 +331,16 @@ def install(application, **kwargs):
         tags['service'] = os.environ.get('SERVICE')
     tags.update(kwargs.get('tags', {}))
     kwargs['tags'] = tags
+
+    # Check if auth variables are set as env vars and set them if so
+    if os.environ.get('INFLUX_USER'):
+        kwargs.setdefault('auth_username', os.environ.get('INFLUX_USER'))
+        kwargs.setdefault('auth_password',
+                          os.environ.get('INFLUX_PASSWORD', ''))
+
+    # Don't leave the environment variable out there with the password
+    if os.environ.get('INFLUX_PASSWORD'):
+        os.environ['INFLUX_PASSWORD'] = 'X' * len(kwargs['auth_password'])
 
     # Create and start the collector
     setattr(application, 'influxdb', InfluxDBCollector(**kwargs))
