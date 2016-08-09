@@ -101,6 +101,10 @@ that any buffered metrics in the InfluxDB collector are written prior to
 shutting down. The method returns a :cls:`~tornado.concurrent.TracebackFuture`
 that should be waited on prior to shutting down.
 
+For environment variable based configuration, use the ``INFLUX_SCHEME``,
+``INFLUX_HOST``, and ``INFLUX_PORT`` environment variables.  The defaults are
+``https``, ``localhost``, and ``8086`` respectively.
+
 To use authentication with InfluxDB, set the ``INFLUX_USER`` and the
 ``INFLUX_PASSWORD`` environment variables. Once installed, the
 ``INFLUX_PASSWORD`` value will be masked in the Python process.
@@ -118,6 +122,8 @@ Settings
    ``hostname`` is added by default along with ``environment`` and ``service``
    if the corresponding ``ENVIRONMENT`` or ``SERVICE`` environment variables
    are set.
+:auth_username: A username to use for InfluxDB authentication, if desired.
+:auth_password: A password to use for InfluxDB authentication, if desired.
 
 Development Quickstart
 ----------------------

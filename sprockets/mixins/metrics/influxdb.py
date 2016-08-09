@@ -319,8 +319,9 @@ def install(application, **kwargs):
         return False
 
     # Get config values
-    url = 'http://{}:{}/write'.format(os.environ.get('INFLUX_HOST'),
-                                      os.environ.get('INFLUX_PORT'))
+    url = '{}://{}:{}/write'.format(os.environ.get('INFLUX_SCHEME', 'http'),
+                                    os.environ.get('INFLUX_HOST', 'localhost'),
+                                    os.environ.get('INFLUX_PORT', 8086))
     kwargs.setdefault('url', url)
 
     # Build the full tag dict and replace what was passed in
