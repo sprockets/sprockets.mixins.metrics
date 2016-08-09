@@ -3,7 +3,7 @@
 Release History
 ===============
 
-`2.1.0`_ (2-Aug-2016)
+`2.1.0`_ (9-Aug-2016)
 ---------------------
 - Add authentication environment variables for InfluxDB
 
