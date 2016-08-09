@@ -1,4 +1,6 @@
+import base64
 import logging
+import os
 import socket
 import time
 import uuid
@@ -145,7 +147,7 @@ class InfluxDbTests(testing.AsyncHTTPTestCase):
         response = self.fetch('/')
         self.assertEqual(response.code, 204)
 
-        for key, fields, timestamp in self.influx_messages:
+        for key, fields, timestamp, _headers in self.influx_messages:
             if key.startswith('my-service,'):
                 tag_dict = dict(a.split('=') for a in key.split(',')[1:])
                 self.assertEqual(tag_dict['handler'],
@@ -169,7 +171,7 @@ class InfluxDbTests(testing.AsyncHTTPTestCase):
         response = self.fetch('/')
         self.assertEqual(response.code, 204)
 
-        for key, fields, timestamp in self.influx_messages:
+        for key, fields, timestamp, _headers in self.influx_messages:
             if key.startswith('my-service,'):
                 value_dict = dict(a.split('=') for a in fields.split(','))
                 assert_between(0.25, float(value_dict['sleepytime']), 0.3)
@@ -182,7 +184,7 @@ class InfluxDbTests(testing.AsyncHTTPTestCase):
         response = self.fetch('/')
         self.assertEqual(response.code, 204)
 
-        for key, fields, timestamp in self.influx_messages:
+        for key, fields, timestamp, _headers in self.influx_messages:
             if key.startswith('my-service,'):
                 value_dict = dict(a.split('=') for a in fields.split(','))
                 self.assertEqual(int(value_dict['slept']), 42)
@@ -204,7 +206,7 @@ class InfluxDbTests(testing.AsyncHTTPTestCase):
         response = self.fetch('/', headers={'Correlation-ID': cid})
         self.assertEqual(response.code, 204)
 
-        for key, fields, timestamp in self.influx_messages:
+        for key, fields, timestamp, _headers in self.influx_messages:
             if key.startswith('my-service,'):
                 tag_dict = dict(a.split('=') for a in key.split(',')[1:])
                 self.assertEqual(tag_dict['correlation_id'], cid)
@@ -225,3 +227,54 @@ class InfluxDbTests(testing.AsyncHTTPTestCase):
         self.assertEqual(response.code, 204)
         with self.assertRaises(AssertionError):
             self.assertEqual(0, len(self.influx_messages))
+
+
+class InfluxDbAuthTests(testing.AsyncHTTPTestCase):
+
+    def setUp(self):
+        self.application = None
+        self.username, self.password = str(uuid.uuid4()), str(uuid.uuid4())
+        os.environ['INFLUX_USER'] = self.username
+        os.environ['INFLUX_PASSWORD'] = self.password
+        super(InfluxDbAuthTests, self).setUp()
+        self.application.settings[influxdb.SETTINGS_KEY] = {
+            'measurement': 'my-service'
+        }
+        logging.getLogger(FakeInfluxHandler.__module__).setLevel(logging.DEBUG)
+
+    @gen.coroutine
+    def tearDown(self):
+        yield influxdb.shutdown(self.application)
+        super(InfluxDbAuthTests, self).tearDown()
+
+    @property
+    def influx_messages(self):
+        return FakeInfluxHandler.get_messages(self.application, self)
+
+    def get_app(self):
+        self.application = web.Application([
+            web.url(r'/', examples.influxdb.SimpleHandler),
+            web.url(r'/write', FakeInfluxHandler),
+        ])
+        influxdb.install(self.application, **{'database': 'requests',
+                                              'submission_interval': 1,
+                                              'url': self.get_url('/write')})
+        self.application.influx_db = {}
+        return self.application
+
+    def test_that_authentication_header_was_sent(self):
+        print(os.environ)
+        response = self.fetch('/')
+        self.assertEqual(response.code, 204)
+
+        for _key, _fields, _timestamp, headers in self.influx_messages:
+            self.assertIn('Authorization', headers)
+            scheme, value = headers['Authorization'].split(' ')
+            self.assertEqual(scheme, 'Basic')
+            temp = base64.b64decode(value.encode('utf-8'))
+            values = temp.decode('utf-8').split(':')
+            self.assertEqual(values[0], self.username)
+            self.assertEqual(values[1], self.password)
+            break
+        else:
+            self.fail('Did not have an Authorization header')
