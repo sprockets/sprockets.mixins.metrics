@@ -54,7 +54,6 @@ Settings
 :port: The Statsd port
 :prepend_metric_type: Optional flag to prepend bucket path with the StatsD
     metric type
-:prepend_hostname: Optional flag to prepend bucket path with the hostname
 
 InfluxDB Mixin
 --------------

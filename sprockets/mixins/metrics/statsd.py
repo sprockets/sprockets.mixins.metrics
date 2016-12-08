@@ -120,20 +120,17 @@ class StatsDCollector(object):
     :param str namespace: The StatsD bucket to write metrics into.
     :param bool prepend_metric_type: Optional flag to prepend bucket path
         with the StatsD metric type
-    :param bool prepend_hostname: Optional flag to prepend bucket path with
-        the hostname
 
     """
     METRIC_TYPES = {'c': 'counters',
                     'ms': 'timers'}
 
     def __init__(self, host, port, namespace='sprockets',
-                 prepend_metric_type=True, prepend_hostname=True):
+                 prepend_metric_type=True):
         self._host = host
         self._port = int(port)
         self._namespace = namespace
         self._prepend_metric_type = prepend_metric_type
-        self._prepend_hostname = prepend_hostname
         self._sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM, 0)
 
     def send(self, path, value, metric_type):
@@ -169,8 +166,7 @@ class StatsDCollector(object):
         """Get prefixes where applicable
 
         Add metric prefix counters, timers respectively if
-        :attr:`prepend_metric_type` flag is True. Adds hostname prefix
-        if :attr:`prepend_hostname` is true.
+        :attr:`prepend_metric_type` flag is True.
 
         :param str metric_type: The metric type
         :rtype: list
@@ -179,8 +175,6 @@ class StatsDCollector(object):
         prefixes = []
         if self._prepend_metric_type:
             prefixes.append(self.METRIC_TYPES[metric_type])
-        if self._prepend_hostname:
-            prefixes.append(socket.gethostname())
         return prefixes
 
 
@@ -191,8 +185,8 @@ def install(application, **kwargs):
         install the collector into.
     :param kwargs: keyword parameters to pass to the
         :class:`StatsDCollector` initializer.
-    :returns: :data:`True` if the client was installed by this call
-        and :data:`False` otherwise.
+    :returns: :data:`True` if the client was installed successfully,
+        or :data:`False` otherwise.
 
     - **host** The StatsD host. If host is not specified, the
         ``STATSD_HOST`` environment variable, or default `127.0.0.1`,

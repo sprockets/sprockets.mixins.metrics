@@ -49,7 +49,8 @@ class StatsdMetricCollectionTests(testing.AsyncHTTPTestCase):
         self.statsd = FakeStatsdServer(self.io_loop)
         statsd.install(self.application, **{'namespace': 'testing',
                                             'host': self.statsd.sockaddr[0],
-                                            'port': self.statsd.sockaddr[1]})
+                                            'port': self.statsd.sockaddr[1],
+                                            'prepend_metric_type': True})
 
     def tearDown(self):
         self.statsd.close()
@@ -59,8 +60,7 @@ class StatsdMetricCollectionTests(testing.AsyncHTTPTestCase):
         response = self.fetch('/')
         self.assertEqual(response.code, 204)
 
-        expected = 'testing.timers.{}.SimpleHandler.GET.204'.format(
-            socket.gethostname().replace('.', '-'))
+        expected = 'testing.timers.SimpleHandler.GET.204'
         for path, value, stat_type in self.statsd.find_metrics(expected, 'ms'):
             assert_between(250.0, float(value), 500.0)
 
@@ -68,8 +68,7 @@ class StatsdMetricCollectionTests(testing.AsyncHTTPTestCase):
         response = self.fetch('/', method='POST', body='')
         self.assertEqual(response.code, 204)
 
-        prefix = 'testing.counters.{}.request.path'.format(
-            socket.gethostname().replace('.', '-'))
+        prefix = 'testing.counters.request.path'
         for path, value, stat_type in self.statsd.find_metrics(prefix, 'c'):
             self.assertEqual(int(value), 1)
 
@@ -77,8 +76,7 @@ class StatsdMetricCollectionTests(testing.AsyncHTTPTestCase):
         response = self.fetch('/counters/path/5', method='POST', body='')
         self.assertEqual(response.code, 204)
 
-        prefix = 'testing.counters.{}.path'.format(
-            socket.gethostname().replace('.', '-'))
+        prefix = 'testing.counters.path'
         for path, value, stat_type in self.statsd.find_metrics(prefix, 'c'):
             self.assertEqual(int(value), 5)
 
@@ -86,8 +84,7 @@ class StatsdMetricCollectionTests(testing.AsyncHTTPTestCase):
         response = self.fetch('/counters/one.two.three/0.25')
         self.assertEqual(response.code, 204)
 
-        prefix = 'testing.timers.{}.one.two.three'.format(
-            socket.gethostname().replace('.', '-'))
+        prefix = 'testing.timers.one.two.three'
         for path, value, stat_type in self.statsd.find_metrics(prefix, 'ms'):
             assert_between(250.0, float(value), 300.0)
 
@@ -114,8 +111,7 @@ class StatsdConfigurationTests(testing.AsyncHTTPTestCase):
         statsd.install(self.application, **{'namespace': 'testing',
                                             'host': self.statsd.sockaddr[0],
                                             'port': self.statsd.sockaddr[1],
-                                            'prepend_metric_type': False,
-                                            'prepend_hostname': False})
+                                            'prepend_metric_type': False})
 
     def tearDown(self):
         self.statsd.close()
