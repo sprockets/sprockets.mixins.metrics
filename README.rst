@@ -98,7 +98,7 @@ variables:
 If your application handles signal handling for shutdowns, the
 :meth:`~sprockets.mixins.influxdb.shutdown` method will try to cleanly ensure
 that any buffered metrics in the InfluxDB collector are written prior to
-shutting down. The method returns a :cls:`~tornado.concurrent.TracebackFuture`
+shutting down. The method returns a :class:`~tornado.concurrent.TracebackFuture`
 that should be waited on prior to shutting down.
 
 For environment variable based configuration, use the ``INFLUX_SCHEME``,
