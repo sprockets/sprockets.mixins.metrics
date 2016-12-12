@@ -3,6 +3,13 @@
 Release History
 ===============
 
+`3.0.0`_ (12-Dec-2016)
+----------------------
+- Add install usage pattern for using mixin within Tornado app
+- Strip down statsd mixin adding a collector class to do metric recording
+- Add path prefix for the metric type, eg. counters, timers, etc
+- Add configuration parameters to enable/disable metric type prefix
+
 `2.1.1`_ (9-Aug-2016)
 ---------------------
 - Fix InfluxDB URL creation from environment variables
@@ -48,8 +55,9 @@ Release History
 - Add :class:`sprockets.mixins.metrics.InfluxDBMixin`
 - Add :class:`sprockets.mixins.metrics.influxdb.InfluxDBConnection`
 
-.. _Next Release: https://github.com/sprockets/sprockets.mixins.metrics/compare/2.1.1...master
-.. _2.1.0: https://github.com/sprockets/sprockets.mixins.metrics/compare/2.1.0...2.1.1
+.. _Next Release: https://github.com/sprockets/sprockets.mixins.metrics/compare/3.0.0...master
+.. _3.0.0: https://github.com/sprockets/sprockets.mixins.metrics/compare/2.1.1...3.0.0
+.. _2.1.1: https://github.com/sprockets/sprockets.mixins.metrics/compare/2.1.0...2.1.1
 .. _2.1.0: https://github.com/sprockets/sprockets.mixins.metrics/compare/2.0.1...2.1.0
 .. _2.0.1: https://github.com/sprockets/sprockets.mixins.metrics/compare/2.0.0...2.0.1
 .. _2.0.0: https://github.com/sprockets/sprockets.mixins.metrics/compare/1.1.1...2.0.0
