@@ -3,6 +3,10 @@
 Release History
 ===============
 
+`3.0.2`_ (12-Dec-2016)
+----------------------
+- Fix influxdb test that fails intermittently.
+
 `3.0.1`_ (12-Dec-2016)
 ----------------------
 - Add README.rst to MANIFEST.in
@@ -59,7 +63,8 @@ Release History
 - Add :class:`sprockets.mixins.metrics.InfluxDBMixin`
 - Add :class:`sprockets.mixins.metrics.influxdb.InfluxDBConnection`
 
-.. _Next Release: https://github.com/sprockets/sprockets.mixins.metrics/compare/3.0.1...master
+.. _Next Release: https://github.com/sprockets/sprockets.mixins.metrics/compare/3.0.2...master
+.. _3.0.2: https://github.com/sprockets/sprockets.mixins.metrics/compare/3.0.1...3.0.2
 .. _3.0.1: https://github.com/sprockets/sprockets.mixins.metrics/compare/3.0.0...3.0.1
 .. _3.0.0: https://github.com/sprockets/sprockets.mixins.metrics/compare/2.1.1...3.0.0
 .. _2.1.1: https://github.com/sprockets/sprockets.mixins.metrics/compare/2.1.0...2.1.1

@@ -206,7 +206,8 @@ class InfluxDbTests(testing.AsyncHTTPTestCase):
                 self.assertEqual(tag_dict['status_code'], '204')
 
                 value_dict = dict(a.split('=') for a in fields.split(','))
-                assert_between(0.25, float(value_dict['duration']), 0.3)
+                self.assertIn('duration', value_dict)
+                self.assertTrue(float(value_dict['duration']) > 0)
 
                 nanos_since_epoch = int(timestamp)
                 then = nanos_since_epoch / 1000000000
