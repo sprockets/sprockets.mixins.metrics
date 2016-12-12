@@ -3,13 +3,15 @@ import logging
 import os
 import socket
 import time
+import unittest
 import uuid
 
 from tornado import gen, testing, web
 import mock
 
 from sprockets.mixins.metrics import influxdb, statsd
-from sprockets.mixins.metrics.testing import FakeInfluxHandler, FakeStatsdServer
+from sprockets.mixins.metrics.testing import (
+    FakeInfluxHandler, FakeStatsdServer)
 import examples.influxdb
 import examples.statsd
 
@@ -34,7 +36,7 @@ def assert_between(low, value, high):
             value, low, high))
 
 
-class StatsdMethodTimingTests(testing.AsyncHTTPTestCase):
+class StatsdMetricCollectionTests(testing.AsyncHTTPTestCase):
 
     def get_app(self):
         self.application = web.Application([
@@ -45,21 +47,77 @@ class StatsdMethodTimingTests(testing.AsyncHTTPTestCase):
 
     def setUp(self):
         self.application = None
-        super(StatsdMethodTimingTests, self).setUp()
+        super(StatsdMetricCollectionTests, self).setUp()
         self.statsd = FakeStatsdServer(self.io_loop)
-        self.application.settings[statsd.SETTINGS_KEY] = {
-            'host': self.statsd.sockaddr[0],
-            'port': self.statsd.sockaddr[1],
-            'namespace': 'testing',
-        }
+        statsd.install(self.application, **{'namespace': 'testing',
+                                            'host': self.statsd.sockaddr[0],
+                                            'port': self.statsd.sockaddr[1],
+                                            'prepend_metric_type': True})
 
     def tearDown(self):
         self.statsd.close()
-        super(StatsdMethodTimingTests, self).tearDown()
+        super(StatsdMetricCollectionTests, self).tearDown()
 
-    @property
-    def settings(self):
-        return self.application.settings[statsd.SETTINGS_KEY]
+    def test_that_http_method_call_is_recorded(self):
+        response = self.fetch('/')
+        self.assertEqual(response.code, 204)
+
+        expected = 'testing.timers.SimpleHandler.GET.204'
+        for path, value, stat_type in self.statsd.find_metrics(expected, 'ms'):
+            assert_between(250.0, float(value), 500.0)
+
+    def test_that_counter_increment_defaults_to_one(self):
+        response = self.fetch('/', method='POST', body='')
+        self.assertEqual(response.code, 204)
+
+        prefix = 'testing.counters.request.path'
+        for path, value, stat_type in self.statsd.find_metrics(prefix, 'c'):
+            self.assertEqual(int(value), 1)
+
+    def test_that_counter_accepts_increment_value(self):
+        response = self.fetch('/counters/path/5', method='POST', body='')
+        self.assertEqual(response.code, 204)
+
+        prefix = 'testing.counters.path'
+        for path, value, stat_type in self.statsd.find_metrics(prefix, 'c'):
+            self.assertEqual(int(value), 5)
+
+    def test_that_execution_timer_records_time_spent(self):
+        response = self.fetch('/counters/one.two.three/0.25')
+        self.assertEqual(response.code, 204)
+
+        prefix = 'testing.timers.one.two.three'
+        for path, value, stat_type in self.statsd.find_metrics(prefix, 'ms'):
+            assert_between(250.0, float(value), 300.0)
+
+    def test_that_add_metric_tag_is_ignored(self):
+        response = self.fetch('/',
+                              headers={'Correlation-ID': 'does not matter'})
+        self.assertEqual(response.code, 204)
+
+
+class StatsdConfigurationTests(testing.AsyncHTTPTestCase):
+
+    def get_app(self):
+        self.application = web.Application([
+            web.url('/', examples.statsd.SimpleHandler),
+            web.url('/counters/(.*)/([.0-9]*)', CounterBumper),
+        ])
+        return self.application
+
+    def setUp(self):
+        self.application = None
+        super(StatsdConfigurationTests, self).setUp()
+        self.statsd = FakeStatsdServer(self.io_loop)
+
+        statsd.install(self.application, **{'namespace': 'testing',
+                                            'host': self.statsd.sockaddr[0],
+                                            'port': self.statsd.sockaddr[1],
+                                            'prepend_metric_type': False})
+
+    def tearDown(self):
+        self.statsd.close()
+        super(StatsdConfigurationTests, self).tearDown()
 
     def test_that_http_method_call_is_recorded(self):
         response = self.fetch('/')
@@ -69,27 +127,6 @@ class StatsdMethodTimingTests(testing.AsyncHTTPTestCase):
         for path, value, stat_type in self.statsd.find_metrics(expected, 'ms'):
             assert_between(250.0, float(value), 500.0)
 
-    def test_that_cached_socket_is_used(self):
-        sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM, 0)
-        self.settings['socket'] = sock
-        self.fetch('/')
-        self.assertIs(self.settings['socket'], sock)
-
-    def test_that_default_prefix_is_stored(self):
-        del self.settings['namespace']
-        self.fetch('/')
-        self.assertEqual(
-            self.settings['namespace'],
-            'applications.' + examples.statsd.SimpleHandler.__module__)
-
-    def test_that_counter_increment_defaults_to_one(self):
-        response = self.fetch('/', method='POST', body='')
-        self.assertEqual(response.code, 204)
-
-        prefix = 'testing.request.path'
-        for path, value, stat_type in self.statsd.find_metrics(prefix, 'c'):
-            self.assertEqual(int(value), 1)
-
     def test_that_counter_accepts_increment_value(self):
         response = self.fetch('/counters/path/5', method='POST', body='')
         self.assertEqual(response.code, 204)
@@ -98,18 +135,30 @@ class StatsdMethodTimingTests(testing.AsyncHTTPTestCase):
         for path, value, stat_type in self.statsd.find_metrics(prefix, 'c'):
             self.assertEqual(int(value), 5)
 
-    def test_that_execution_timer_records_time_spent(self):
-        response = self.fetch('/counters/one.two.three/0.25')
-        self.assertEqual(response.code, 204)
 
-        prefix = 'testing.one.two.three'
-        for path, value, stat_type in self.statsd.find_metrics(prefix, 'ms'):
-            assert_between(250.0, float(value), 300.0)
+class StatsdInstallationTests(unittest.TestCase):
 
-    def test_that_add_metric_tag_is_ignored(self):
-        response = self.fetch('/',
-                              headers={'Correlation-ID': 'does not matter'})
-        self.assertEqual(response.code, 204)
+    def setUp(self):
+        self.application = web.Application([
+            web.url('/', examples.statsd.SimpleHandler),
+        ])
+
+    def test_collecter_is_not_reinstalled(self):
+        self.assertTrue(statsd.install(self.application))
+        self.assertFalse(statsd.install(self.application))
+
+    def test_host_is_used(self):
+        statsd.install(self.application, **{'host': 'example.com'})
+        self.assertEqual(self.application.statsd._host, 'example.com')
+
+    def test_port_is_used(self):
+        statsd.install(self.application, **{'port': '8888'})
+        self.assertEqual(self.application.statsd._port, 8888)
+
+    def test_default_host_and_port_is_used(self):
+        statsd.install(self.application, **{'namespace': 'testing'})
+        self.assertEqual(self.application.statsd._host, '127.0.0.1')
+        self.assertEqual(self.application.statsd._port, 8125)
 
 
 class InfluxDbTests(testing.AsyncHTTPTestCase):

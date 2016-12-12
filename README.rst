@@ -22,16 +22,14 @@ call to the ``get`` method as well as a separate metric for the database query.
    import queries
 
    def make_application():
-       settings = {
-           statsd.SETTINGS_KEY: {
-               'namespace': 'my-application',
-               'host': os.environ.get('STATSD_HOST', '127.0.0.1'),
-               'port': os.environ.get('STATSD_PORT', '8125'),
-           }
-       }
-       return web.Application([
-           # insert handlers here
+       application = web.Application([
+           web.url(r'/', MyHandler),
        ], **settings)
+
+       statsd.install({'namespace': 'my-application',
+                       'host': os.environ.get('STATSD_HOST', '127.0.0.1'),
+                       'port': os.environ.get('STATSD_PORT', '8125')})
+       return application
 
    class MyHandler(statsd.StatsdMixin,
                    mediatype.ContentMixin,
@@ -54,6 +52,8 @@ Settings
 :namespace: The namespace for the measurements
 :host: The Statsd host
 :port: The Statsd port
+:prepend_metric_type: Optional flag to prepend bucket path with the StatsD
+    metric type
 
 InfluxDB Mixin
 --------------
@@ -76,7 +76,7 @@ variables:
 
        application = web.Application(
            [
-               web.url(r'/', RequestHandler),
+               web.url(r'/', MyHandler),
            ], **settings)
 
        influxdb.install({'url': 'http://localhost:8086',

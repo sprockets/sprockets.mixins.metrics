@@ -4,9 +4,6 @@ import socket
 
 from tornado import gen, web
 
-from sprockets.mixins.metrics import influxdb
-
-
 LOGGER = logging.getLogger(__name__)
 STATS_PATTERN = re.compile(r'(?P<path>[^:]*):(?P<value>[^|]*)\|(?P<type>.*)$')
 
