@@ -30,6 +30,12 @@ class CounterBumper(statsd.StatsdMixin, web.RequestHandler):
         self.set_status(204)
 
 
+class DefaultStatusCode(statsd.StatsdMixin, web.RequestHandler):
+
+    def get(self):
+        pass
+
+
 def assert_between(low, value, high):
     if not (low <= value < high):
         raise AssertionError('Expected {} to be between {} and {}'.format(
@@ -42,6 +48,7 @@ class StatsdMetricCollectionTests(testing.AsyncHTTPTestCase):
         self.application = web.Application([
             web.url('/', examples.statsd.SimpleHandler),
             web.url('/counters/(.*)/([.0-9]*)', CounterBumper),
+            web.url('/status_code', DefaultStatusCode),
         ])
         return self.application
 
@@ -94,6 +101,14 @@ class StatsdMetricCollectionTests(testing.AsyncHTTPTestCase):
         response = self.fetch('/',
                               headers={'Correlation-ID': 'does not matter'})
         self.assertEqual(response.code, 204)
+
+    def test_that_status_code_is_used_when_not_explicitly_set(self):
+        response = self.fetch('/status_code')
+        self.assertEqual(response.code, 200)
+
+        expected = 'testing.timers.DefaultStatusCode.GET.200'
+        self.assertEqual(expected,
+                         list(self.statsd.find_metrics(expected, 'ms'))[0][0])
 
 
 class StatsdConfigurationTests(testing.AsyncHTTPTestCase):

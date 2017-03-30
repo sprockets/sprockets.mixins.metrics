@@ -15,7 +15,6 @@ class StatsdMixin(object):
 
     def initialize(self):
         super(StatsdMixin, self).initialize()
-        self.__status_code = None
 
     def set_metric_tag(self, tag, value):
         """Ignored for statsd since it does not support tagging.
@@ -90,21 +89,7 @@ class StatsdMixin(object):
         super(StatsdMixin, self).on_finish()
         self.record_timing(self.request.request_time(),
                            self.__class__.__name__, self.request.method,
-                           self.__status_code)
-
-    def set_status(self, status_code, reason=None):
-        """Extend tornado `set_status` method to track status code
-        to avoid referencing the _status internal variable
-
-        :param int status_code: Response status code. If ``reason``
-            is ``None``, it must be present in `httplib.responses
-            <http.client.responses>`.
-        :param string reason: Human-readable reason phrase describing
-            the status code. If ``None``, it will be filled in from
-            `httplib.responses <http.client.responses>`.
-        """
-        self.__status_code = status_code
-        super(StatsdMixin, self).set_status(status_code, reason=reason)
+                           self.get_status())
 
 
 class StatsDCollector(object):

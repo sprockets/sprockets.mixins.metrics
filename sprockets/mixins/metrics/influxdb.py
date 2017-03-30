@@ -93,7 +93,7 @@ class InfluxDBMixin(object):
 
     def on_finish(self):
         super(InfluxDBMixin, self).on_finish()
-        self.set_metric_tag('status_code', self._status_code)
+        self.set_metric_tag('status_code', self.get_status())
         self.record_timing(self.request.request_time(), 'duration')
         self.application.influxdb.submit(
             self.settings[SETTINGS_KEY]['measurement'],
