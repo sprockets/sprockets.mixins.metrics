@@ -3,6 +3,11 @@
 Release History
 ===============
 
+`3.0.4`_ (31-Jan-2018)
+----------------------
+- Loosen Tornado pin to include 4.4.
+
+
 `3.0.3`_ (24-Mar-2017)
 ----------------------
 - Fix retrival of status code.
@@ -67,7 +72,8 @@ Release History
 - Add :class:`sprockets.mixins.metrics.InfluxDBMixin`
 - Add :class:`sprockets.mixins.metrics.influxdb.InfluxDBConnection`
 
-.. _Next Release: https://github.com/sprockets/sprockets.mixins.metrics/compare/3.0.3...master
+.. _Next Release: https://github.com/sprockets/sprockets.mixins.metrics/compare/3.0.4...master
+.. _3.0.4: https://github.com/sprockets/sprockets.mixins.metrics/compare/3.0.3...3.0.4
 .. _3.0.3: https://github.com/sprockets/sprockets.mixins.metrics/compare/3.0.2...3.0.3
 .. _3.0.2: https://github.com/sprockets/sprockets.mixins.metrics/compare/3.0.1...3.0.2
 .. _3.0.1: https://github.com/sprockets/sprockets.mixins.metrics/compare/3.0.0...3.0.1
