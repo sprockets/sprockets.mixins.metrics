@@ -4,6 +4,8 @@ import os
 import socket
 import time
 
+from tornado import iostream
+
 LOGGER = logging.getLogger(__name__)
 
 SETTINGS_KEY = 'sprockets.mixins.metrics.statsd'
@@ -102,6 +104,7 @@ class StatsDCollector(object):
 
     :param str host: The StatsD host
     :param str port: The StatsD port
+    :param bool tcp: Flag to set a TCP or UDP client
     :param str namespace: The StatsD bucket to write metrics into.
     :param bool prepend_metric_type: Optional flag to prepend bucket path
         with the StatsD metric type
@@ -110,13 +113,42 @@ class StatsDCollector(object):
     METRIC_TYPES = {'c': 'counters',
                     'ms': 'timers'}
 
-    def __init__(self, host, port, namespace='sprockets',
+    def __init__(self, host, port, proto='udp', namespace='sprockets',
                  prepend_metric_type=True):
         self._host = host
         self._port = int(port)
+        self._address = (self._host, self._port)
         self._namespace = namespace
         self._prepend_metric_type = prepend_metric_type
-        self._sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM, 0)
+
+        if proto == 'udp':
+            self._tcp = False
+            self._sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM, 0)
+        else:
+            self._tcp = True
+            self._sock = self._tcp_socket()
+
+    def _tcp_socket(self):
+        """Connect to statsd via TCP and return the IOStream handle.
+        :rtype: iostream.IOStream
+        """
+        sock = iostream.IOStream(socket.socket(
+            socket.AF_INET, socket.SOCK_STREAM, socket.IPPROTO_TCP))
+        try:
+            sock.connect(self._address, self._tcp_on_connected)
+        except (OSError, socket.error) as error:
+            LOGGER.error('Failed to connect via TCP: %s', error)
+        sock.set_close_callback(self._tcp_on_closed)
+        return sock
+
+    def _tcp_on_closed(self):
+        """Invoked when the socket is closed."""
+        LOGGER.warning('Disconnected from statsd, reconnecting')
+        self._sock = self._tcp_socket()
+
+    def _tcp_on_connected(self):
+        """Invoked when the IOStream is connected"""
+        LOGGER.debug('Connected to statsd at %s via TCP', self._address)
 
     def send(self, path, value, metric_type):
         """Send a metric to Statsd.
@@ -128,10 +160,17 @@ class StatsDCollector(object):
         """
         msg = '{0}:{1}|{2}'.format(
             self._build_path(path, metric_type), value, metric_type)
+
+        encoding = 'utf-8'
+        #encoding = 'ascii'
+
         try:
-            LOGGER.debug('Sending %s to %s:%s', msg.encode('ascii'),
+            LOGGER.debug('Sending %s to %s:%s', msg.encode(encoding),
                          self._host, self._port)
-            self._sock.sendto(msg.encode('ascii'), (self._host, self._port))
+            if self._tcp:
+                return self._sock.write(msg.encode(encoding))
+            else:
+                self._sock.sendto(msg.encode(encoding), (self._host, self._port))
         except socket.error:
             LOGGER.exception('Error sending StatsD metrics')
 
@@ -190,6 +229,15 @@ def install(application, **kwargs):
         kwargs['host'] = os.environ.get('STATSD_HOST', '127.0.0.1')
     if 'port' not in kwargs:
         kwargs['port'] = os.environ.get('STATSD_PORT', '8125')
+
+    if 'proto' not in kwargs:
+        if "STATSD_PROTO" in os.environ:
+            kwargs['proto'] = os.environ.get('STATSD_PROTO', 'udp')
+        else:
+            kwargs['proto'] = 'udp'
+
+    if kwargs['proto'] not in ['udp', 'tcp']:
+        raise ValueError('Invalid value for STATSD_PROTO: {}'.format(kwargs['proto']))
 
     setattr(application, 'statsd', StatsDCollector(**kwargs))
     return True

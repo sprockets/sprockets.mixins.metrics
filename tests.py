@@ -11,7 +11,7 @@ import mock
 
 from sprockets.mixins.metrics import influxdb, statsd
 from sprockets.mixins.metrics.testing import (
-    FakeInfluxHandler, FakeStatsdServer)
+    FakeInfluxHandler, FakeUDPStatsdServer, FakeTCPStatsdServer)
 import examples.influxdb
 import examples.statsd
 
@@ -41,8 +41,7 @@ def assert_between(low, value, high):
         raise AssertionError('Expected {} to be between {} and {}'.format(
             value, low, high))
 
-
-class StatsdMetricCollectionTests(testing.AsyncHTTPTestCase):
+class TCPStatsdMetricCollectionTests(testing.AsyncHTTPTestCase):
 
     def get_app(self):
         self.application = web.Application([
@@ -54,16 +53,14 @@ class StatsdMetricCollectionTests(testing.AsyncHTTPTestCase):
 
     def setUp(self):
         self.application = None
-        super(StatsdMetricCollectionTests, self).setUp()
-        self.statsd = FakeStatsdServer(self.io_loop)
+        super(TCPStatsdMetricCollectionTests, self).setUp()
+        self.statsd = FakeTCPStatsdServer(self.io_loop)
+
         statsd.install(self.application, **{'namespace': 'testing',
                                             'host': self.statsd.sockaddr[0],
                                             'port': self.statsd.sockaddr[1],
+                                            'proto': 'tcp',
                                             'prepend_metric_type': True})
-
-    def tearDown(self):
-        self.statsd.close()
-        super(StatsdMetricCollectionTests, self).tearDown()
 
     def test_that_http_method_call_is_recorded(self):
         response = self.fetch('/')
@@ -111,7 +108,7 @@ class StatsdMetricCollectionTests(testing.AsyncHTTPTestCase):
                          list(self.statsd.find_metrics(expected, 'ms'))[0][0])
 
 
-class StatsdConfigurationTests(testing.AsyncHTTPTestCase):
+class TCPStatsdConfigurationTests(testing.AsyncHTTPTestCase):
 
     def get_app(self):
         self.application = web.Application([
@@ -122,17 +119,126 @@ class StatsdConfigurationTests(testing.AsyncHTTPTestCase):
 
     def setUp(self):
         self.application = None
-        super(StatsdConfigurationTests, self).setUp()
-        self.statsd = FakeStatsdServer(self.io_loop)
+        super(TCPStatsdConfigurationTests, self).setUp()
+        self.statsd = FakeTCPStatsdServer(self.io_loop)
 
         statsd.install(self.application, **{'namespace': 'testing',
                                             'host': self.statsd.sockaddr[0],
                                             'port': self.statsd.sockaddr[1],
+                                            'proto': 'tcp',
+                                            'prepend_metric_type': False})
+
+    def test_that_http_method_call_is_recorded(self):
+        response = self.fetch('/')
+        self.assertEqual(response.code, 204)
+
+        expected = 'testing.SimpleHandler.GET.204'
+        for path, value, stat_type in self.statsd.find_metrics(expected, 'ms'):
+            assert_between(250.0, float(value), 500.0)
+
+    def test_that_counter_accepts_increment_value(self):
+        response = self.fetch('/counters/path/5', method='POST', body='')
+        self.assertEqual(response.code, 204)
+
+        prefix = 'testing.path'
+        for path, value, stat_type in self.statsd.find_metrics(prefix, 'c'):
+            self.assertEqual(int(value), 5)
+
+
+class UDPStatsdMetricCollectionTests(testing.AsyncHTTPTestCase):
+
+    def get_app(self):
+        self.application = web.Application([
+            web.url('/', examples.statsd.SimpleHandler),
+            web.url('/counters/(.*)/([.0-9]*)', CounterBumper),
+            web.url('/status_code', DefaultStatusCode),
+        ])
+        return self.application
+
+    def setUp(self):
+        self.application = None
+        super(UDPStatsdMetricCollectionTests, self).setUp()
+        self.statsd = FakeUDPStatsdServer(self.io_loop)
+
+        statsd.install(self.application, **{'namespace': 'testing',
+                                            'host': self.statsd.sockaddr[0],
+                                            'port': self.statsd.sockaddr[1],
+                                            'proto': 'udp',
+                                            'prepend_metric_type': True})
+
+    def tearDown(self):
+        self.statsd.close()
+        super(UDPStatsdMetricCollectionTests, self).tearDown()
+
+    def test_that_http_method_call_is_recorded(self):
+        response = self.fetch('/')
+        self.assertEqual(response.code, 204)
+
+        expected = 'testing.timers.SimpleHandler.GET.204'
+        for path, value, stat_type in self.statsd.find_metrics(expected, 'ms'):
+            assert_between(250.0, float(value), 500.0)
+
+    def test_that_counter_increment_defaults_to_one(self):
+        response = self.fetch('/', method='POST', body='')
+        self.assertEqual(response.code, 204)
+
+        prefix = 'testing.counters.request.path'
+        for path, value, stat_type in self.statsd.find_metrics(prefix, 'c'):
+            self.assertEqual(int(value), 1)
+
+    def test_that_counter_accepts_increment_value(self):
+        response = self.fetch('/counters/path/5', method='POST', body='')
+        self.assertEqual(response.code, 204)
+
+        prefix = 'testing.counters.path'
+        for path, value, stat_type in self.statsd.find_metrics(prefix, 'c'):
+            self.assertEqual(int(value), 5)
+
+    def test_that_execution_timer_records_time_spent(self):
+        response = self.fetch('/counters/one.two.three/0.25')
+        self.assertEqual(response.code, 204)
+
+        prefix = 'testing.timers.one.two.three'
+        for path, value, stat_type in self.statsd.find_metrics(prefix, 'ms'):
+            assert_between(250.0, float(value), 300.0)
+
+    def test_that_add_metric_tag_is_ignored(self):
+        response = self.fetch('/',
+                              headers={'Correlation-ID': 'does not matter'})
+        self.assertEqual(response.code, 204)
+
+    def test_that_status_code_is_used_when_not_explicitly_set(self):
+        response = self.fetch('/status_code')
+        self.assertEqual(response.code, 200)
+
+        expected = 'testing.timers.DefaultStatusCode.GET.200'
+        self.assertEqual(expected,
+                         list(self.statsd.find_metrics(expected, 'ms'))[0][0])
+
+
+class UDPStatsdConfigurationTests(testing.AsyncHTTPTestCase):
+
+    def get_app(self):
+        self.application = web.Application([
+            web.url('/', examples.statsd.SimpleHandler),
+            web.url('/counters/(.*)/([.0-9]*)', CounterBumper),
+        ])
+        return self.application
+
+    def setUp(self):
+        self.application = None
+        super(UDPStatsdConfigurationTests, self).setUp()
+        self.statsd = FakeUDPStatsdServer(self.io_loop)
+
+        statsd.install(self.application, **{'namespace': 'testing',
+                                            'host': self.statsd.sockaddr[0],
+                                            'port': self.statsd.sockaddr[1],
+                                            'proto': 'udp',
                                             'prepend_metric_type': False})
 
     def tearDown(self):
         self.statsd.close()
-        super(StatsdConfigurationTests, self).tearDown()
+        super(UDPStatsdConfigurationTests, self).tearDown()
 
     def test_that_http_method_call_is_recorded(self):
         response = self.fetch('/')

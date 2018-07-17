@@ -2,13 +2,72 @@ import logging
 import re
 import socket
 
-from tornado import gen, web
+from tornado import gen, iostream, locks, tcpserver, testing, web
 
 LOGGER = logging.getLogger(__name__)
-STATS_PATTERN = re.compile(r'(?P<path>[^:]*):(?P<value>[^|]*)\|(?P<type>.*)$')
 
 
-class FakeStatsdServer(object):
+class FakeTCPStatsdServer(tcpserver.TCPServer):
+
+    PATTERN = br'(?P<path>[^:]*):(?P<value>[^|]*)\|(?P<type>.*)$'
+
+    def __init__(self, iol, ssl_options=None, max_buffer_size=None,
+                 read_chunk_size=None):
+        self.event = locks.Event()
+        self.datagrams = []
+        self.reconnect_receive = False
+        super(FakeTCPStatsdServer, self).__init__(
+            ssl_options, max_buffer_size, read_chunk_size)
+
+        self.sock, self.port = testing.bind_unused_port()
+        self.add_socket(self.sock)
+        self.sockaddr = self.sock.getsockname()
+
+    @gen.coroutine
+    def handle_stream(self, stream, address):
+        while True:
+            try:
+                result = yield stream.read_until_regex(self.PATTERN)
+            except iostream.StreamClosedError:
+                break
+            else:
+                self.event.set()
+                self.datagrams.append(result)
+                if b'reconnect' in result:
+                    self.reconnect_receive = True
+                    stream.close()
+                    return
+
+    def find_metrics(self, prefix, metric_type):
+         """
+         Yields captured datagrams that start with `prefix`.
+
+         :param str prefix: the metric prefix to search for
+         :param str metric_type: the statsd metric type (e.g., 'ms', 'c')
+         :returns: yields (path, value, metric_type) tuples for each
+             captured metric that matches
+         :raises AssertionError: if no metrics match.
+
+         """
+         pattern = re.compile(
+             '(?P<path>{}[^:]*):(?P<value>[^|]*)\\|(?P<type>{})'.format(
+                 re.escape(prefix), re.escape(metric_type)))
+         matched = False
+
+         for datagram in self.datagrams:
+             text_msg = datagram.decode('ascii')
+             match = pattern.match(text_msg)
+             if match:
+                 yield match.groups()
+                 matched = True
+
+         if not matched:
+             raise AssertionError(
+                 'Expected metric starting with "{}" in {!r}'.format(
+                     prefix, self.datagrams))
+
+
+class FakeUDPStatsdServer(object):
     """
     Implements something resembling a statsd server.
 
@@ -73,6 +132,7 @@ class FakeStatsdServer(object):
             '(?P<path>{}[^:]*):(?P<value>[^|]*)\\|(?P<type>{})'.format(
                 re.escape(prefix), re.escape(metric_type)))
         matched = False
+
         for datagram in self.datagrams:
             text_msg = datagram.decode('ascii')
             match = pattern.match(text_msg)
