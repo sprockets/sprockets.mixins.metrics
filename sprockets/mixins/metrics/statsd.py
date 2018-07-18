@@ -104,7 +104,7 @@ class StatsDCollector(object):
 
     :param str host: The StatsD host
     :param str port: The StatsD port
-    :param bool tcp: Flag to set a TCP or UDP client
+    :param str protocol: lowercase udp or tcp
     :param str namespace: The StatsD bucket to write metrics into.
     :param bool prepend_metric_type: Optional flag to prepend bucket path
         with the StatsD metric type
@@ -113,7 +113,7 @@ class StatsDCollector(object):
     METRIC_TYPES = {'c': 'counters',
                     'ms': 'timers'}
 
-    def __init__(self, host, port, proto='udp', namespace='sprockets',
+    def __init__(self, host, port, protocol='udp', namespace='sprockets',
                  prepend_metric_type=True):
         self._host = host
         self._port = int(port)
@@ -121,12 +121,14 @@ class StatsDCollector(object):
         self._namespace = namespace
         self._prepend_metric_type = prepend_metric_type
 
-        if proto == 'udp':
+        if protocol == 'tcp':
+            self._tcp = True
+            self._sock = self._tcp_socket()
+        elif protocol == 'udp':
             self._tcp = False
             self._sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM, 0)
         else:
-            self._tcp = True
-            self._sock = self._tcp_socket()
+            raise ValueError('Invalid protocol: {}'.format(protocol))
 
     def _tcp_socket(self):
         """Connect to statsd via TCP and return the IOStream handle.
@@ -161,18 +163,15 @@ class StatsDCollector(object):
         msg = '{0}:{1}|{2}'.format(
             self._build_path(path, metric_type), value, metric_type)
 
-        encoding = 'utf-8'
-        #encoding = 'ascii'
-
         try:
-            LOGGER.debug('Sending %s to %s:%s', msg.encode(encoding),
+            LOGGER.debug('Sending %s to %s:%s', msg.encode('ascii'),
                          self._host, self._port)
             if self._tcp:
-                return self._sock.write(msg.encode(encoding))
-            else:
-                self._sock.sendto(msg.encode(encoding), (self._host, self._port))
-        except socket.error:
-            LOGGER.exception('Error sending StatsD metrics')
+                return self._sock.write(msg.encode('ascii'))
+
+            self._sock.sendto(msg.encode('ascii'), (self._host, self._port))
+        except (OSError, socket.error) as error:  # pragma: nocover
+            LOGGER.exception('Error sending statsd metric: %s', error)
 
     def _build_path(self, path, metric_type):
         """Return a normalized path.
@@ -230,14 +229,8 @@ def install(application, **kwargs):
     if 'port' not in kwargs:
         kwargs['port'] = os.environ.get('STATSD_PORT', '8125')
 
-    if 'proto' not in kwargs:
-        if "STATSD_PROTO" in os.environ:
-            kwargs['proto'] = os.environ.get('STATSD_PROTO', 'udp')
-        else:
-            kwargs['proto'] = 'udp'
-
-    if kwargs['proto'] not in ['udp', 'tcp']:
-        raise ValueError('Invalid value for STATSD_PROTO: {}'.format(kwargs['proto']))
+    if 'protocol' not in kwargs:
+        kwargs['protocol'] = os.environ.get('STATSD_PROTOCOL', 'udp')
 
     setattr(application, 'statsd', StatsDCollector(**kwargs))
     return True

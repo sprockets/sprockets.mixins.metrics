@@ -59,7 +59,7 @@ class TCPStatsdMetricCollectionTests(testing.AsyncHTTPTestCase):
         statsd.install(self.application, **{'namespace': 'testing',
                                             'host': self.statsd.sockaddr[0],
                                             'port': self.statsd.sockaddr[1],
-                                            'proto': 'tcp',
+                                            'protocol': 'tcp',
                                             'prepend_metric_type': True})
 
     def test_that_http_method_call_is_recorded(self):
@@ -125,7 +125,7 @@ class TCPStatsdConfigurationTests(testing.AsyncHTTPTestCase):
         statsd.install(self.application, **{'namespace': 'testing',
                                             'host': self.statsd.sockaddr[0],
                                             'port': self.statsd.sockaddr[1],
-                                            'proto': 'tcp',
+                                            'protocol': 'tcp',
                                             'prepend_metric_type': False})
 
     def test_that_http_method_call_is_recorded(self):
@@ -163,7 +163,7 @@ class UDPStatsdMetricCollectionTests(testing.AsyncHTTPTestCase):
         statsd.install(self.application, **{'namespace': 'testing',
                                             'host': self.statsd.sockaddr[0],
                                             'port': self.statsd.sockaddr[1],
-                                            'proto': 'udp',
+                                            'protocol': 'udp',
                                             'prepend_metric_type': True})
 
     def tearDown(self):
@@ -233,7 +233,7 @@ class UDPStatsdConfigurationTests(testing.AsyncHTTPTestCase):
         statsd.install(self.application, **{'namespace': 'testing',
                                             'host': self.statsd.sockaddr[0],
                                             'port': self.statsd.sockaddr[1],
-                                            'proto': 'udp',
+                                            'protocol': 'udp',
                                             'prepend_metric_type': False})
 
     def tearDown(self):
