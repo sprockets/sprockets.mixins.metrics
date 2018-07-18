@@ -163,9 +163,10 @@ class StatsDCollector(object):
         msg = '{0}:{1}|{2}'.format(
             self._build_path(path, metric_type), value, metric_type)
 
+        LOGGER.debug('Sending %s to %s:%s', msg.encode('ascii'),
+                     self._host, self._port)
+
         try:
-            LOGGER.debug('Sending %s to %s:%s', msg.encode('ascii'),
-                         self._host, self._port)
             if self._tcp:
                 return self._sock.write(msg.encode('ascii'))
 
