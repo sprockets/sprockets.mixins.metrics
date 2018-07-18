@@ -95,7 +95,7 @@ class StatsdMixin(object):
 
 
 class StatsDCollector(object):
-    """Collects and submits stats to StatsD via UDP socket.
+    """Collects and submits stats to StatsD.
 
      This class should be constructed using the
     :meth:`~sprockets.mixins.statsd.install` method. When installed,
@@ -104,7 +104,7 @@ class StatsDCollector(object):
 
     :param str host: The StatsD host
     :param str port: The StatsD port
-    :param str protocol: lowercase udp or tcp
+    :param str protocol: The StatsD protocol. May be either ``udp`` or ``tcp``.
     :param str namespace: The StatsD bucket to write metrics into.
     :param bool prepend_metric_type: Optional flag to prepend bucket path
         with the StatsD metric type
