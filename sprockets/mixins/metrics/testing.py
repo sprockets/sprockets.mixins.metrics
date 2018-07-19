@@ -2,17 +2,17 @@ import logging
 import re
 import socket
 
-from tornado import gen, web
+from tornado import gen, iostream, locks, tcpserver, testing, web
 
 LOGGER = logging.getLogger(__name__)
-STATS_PATTERN = re.compile(r'(?P<path>[^:]*):(?P<value>[^|]*)\|(?P<type>.*)$')
 
 
-class FakeStatsdServer(object):
+class FakeStatsdServer(tcpserver.TCPServer):
     """
     Implements something resembling a statsd server.
 
     :param tornado.ioloop.IOLoop iol: the loop to attach to
+    :param str protocol: The StatsD protocol. May be either ``udp`` or ``tcp``.
 
     Create an instance of this class in your asynchronous test case
     attached to the IOLoop and configure your application to send
@@ -30,12 +30,31 @@ class FakeStatsdServer(object):
 
     """
 
-    def __init__(self, iol):
+    PATTERN = br'(?P<path>[^:]*):(?P<value>[^|]*)\|(?P<type>.*)$'
+
+    def __init__(self, iol, protocol='udp'):
+        self.datagrams = []
+
+        if protocol == 'tcp':
+            self.tcp_server()
+        elif protocol == 'udp':
+            self.udp_server(iol)
+        else:
+            raise ValueError('Invalid protocol: {}'.format(protocol))
+
+    def tcp_server(self):
+        self.event = locks.Event()
+        super(FakeStatsdServer, self).__init__()
+
+        sock, port = testing.bind_unused_port()
+        self.add_socket(sock)
+        self.sockaddr = sock.getsockname()
+
+    def udp_server(self, iol):
         self.socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM,
                                     socket.IPPROTO_UDP)
         self.socket.bind(('127.0.0.1', 0))
         self.sockaddr = self.socket.getsockname()
-        self.datagrams = []
 
         iol.add_handler(self.socket, self._handle_events, iol.READ)
         self._iol = iol
@@ -47,6 +66,21 @@ class FakeStatsdServer(object):
                 self._iol = None
             self.socket.close()
             self.socket = None
+
+    @gen.coroutine
+    def handle_stream(self, stream, address):
+        while True:
+            try:
+                result = yield stream.read_until_regex(self.PATTERN)
+            except iostream.StreamClosedError:
+                break
+            else:
+                self.event.set()
+                self.datagrams.append(result)
+                if b'reconnect' in result:
+                    self.reconnect_receive = True
+                    stream.close()
+                    return
 
     def _handle_events(self, fd, events):
         if fd != self.socket:
@@ -73,6 +107,7 @@ class FakeStatsdServer(object):
             '(?P<path>{}[^:]*):(?P<value>[^|]*)\\|(?P<type>{})'.format(
                 re.escape(prefix), re.escape(metric_type)))
         matched = False
+
         for datagram in self.datagrams:
             text_msg = datagram.decode('ascii')
             match = pattern.match(text_msg)
