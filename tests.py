@@ -11,7 +11,7 @@ import mock
 
 from sprockets.mixins.metrics import influxdb, statsd
 from sprockets.mixins.metrics.testing import (
-    FakeInfluxHandler, FakeUDPStatsdServer, FakeTCPStatsdServer)
+    FakeInfluxHandler, FakeStatsdServer)
 import examples.influxdb
 import examples.statsd
 
@@ -55,7 +55,7 @@ class TCPStatsdMetricCollectionTests(testing.AsyncHTTPTestCase):
     def setUp(self):
         self.application = None
         super(TCPStatsdMetricCollectionTests, self).setUp()
-        self.statsd = FakeTCPStatsdServer(self.io_loop)
+        self.statsd = FakeStatsdServer(self.io_loop, tcp=True)
 
         statsd.install(self.application, **{'namespace': 'testing',
                                             'host': self.statsd.sockaddr[0],
@@ -121,7 +121,7 @@ class TCPStatsdConfigurationTests(testing.AsyncHTTPTestCase):
     def setUp(self):
         self.application = None
         super(TCPStatsdConfigurationTests, self).setUp()
-        self.statsd = FakeTCPStatsdServer(self.io_loop)
+        self.statsd = FakeStatsdServer(self.io_loop, tcp=True)
 
         statsd.install(self.application, **{'namespace': 'testing',
                                             'host': self.statsd.sockaddr[0],
@@ -159,7 +159,7 @@ class UDPStatsdMetricCollectionTests(testing.AsyncHTTPTestCase):
     def setUp(self):
         self.application = None
         super(UDPStatsdMetricCollectionTests, self).setUp()
-        self.statsd = FakeUDPStatsdServer(self.io_loop)
+        self.statsd = FakeStatsdServer(self.io_loop, tcp=False)
 
         statsd.install(self.application, **{'namespace': 'testing',
                                             'host': self.statsd.sockaddr[0],
@@ -229,7 +229,7 @@ class UDPStatsdConfigurationTests(testing.AsyncHTTPTestCase):
     def setUp(self):
         self.application = None
         super(UDPStatsdConfigurationTests, self).setUp()
-        self.statsd = FakeUDPStatsdServer(self.io_loop)
+        self.statsd = FakeStatsdServer(self.io_loop, tcp=False)
 
         statsd.install(self.application, **{'namespace': 'testing',
                                             'host': self.statsd.sockaddr[0],
