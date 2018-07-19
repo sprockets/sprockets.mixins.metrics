@@ -1,5 +1,8 @@
 sprockets.mixins.metrics
 ========================
+
+|Version| |Status| |Coverage| |License|
+
 Adjust counter and timer metrics in `InfluxDB`_ or `StatsD`_ using the same API.
 
 The mix-in is configured through the ``tornado.web.Application`` settings
@@ -157,3 +160,16 @@ Development Quickstart
 
 .. _StatsD: https://github.com/etsy/statsd
 .. _InfluxDB: https://influxdata.com
+
+
+.. |Version| image:: https://img.shields.io/pypi/v/sprockets_mixins_metrics.svg
+   :target: https://pypi.python.org/pypi/sprockets_mixins_metrics
+
+.. |Status| image:: https://img.shields.io/travis/sprockets/sprockets.mixins.metrics.svg
+   :target: https://travis-ci.org/sprockets/sprockets.mixins.metrics
+
+.. |Coverage| image:: https://img.shields.io/codecov/c/github/sprockets/sprockets.mixins.metrics.svg
+   :target: https://codecov.io/github/sprockets/sprockets.mixins.metrics?branch=master
+
+.. |License| image:: https://img.shields.io/pypi/l/sprockets_mixins_metrics.svg
+   :target: https://github.com/sprockets/sprockets.mixins.metrics/blob/master/LICENSE
