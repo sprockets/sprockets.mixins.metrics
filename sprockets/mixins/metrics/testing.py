@@ -12,7 +12,7 @@ class FakeStatsdServer(tcpserver.TCPServer):
     Implements something resembling a statsd server.
 
     :param tornado.ioloop.IOLoop iol: the loop to attach to
-    :param bool tcp: whether the server implements TCP or UDP
+    :param str protocol: The StatsD protocol. May be either ``udp`` or ``tcp``.
 
     Create an instance of this class in your asynchronous test case
     attached to the IOLoop and configure your application to send
@@ -32,13 +32,15 @@ class FakeStatsdServer(tcpserver.TCPServer):
 
     PATTERN = br'(?P<path>[^:]*):(?P<value>[^|]*)\|(?P<type>.*)$'
 
-    def __init__(self, iol, tcp=False):
+    def __init__(self, iol, protocol='udp'):
         self.datagrams = []
 
-        if tcp is False:
+        if protocol == 'tcp':
+            self.tcp_server()
+        elif protocol == 'udp':
             self.udp_server(iol)
         else:
-            self.tcp_server()
+            raise ValueError('Invalid protocol: {}'.format(protocol))
 
     def tcp_server(self):
         self.event = locks.Event()
