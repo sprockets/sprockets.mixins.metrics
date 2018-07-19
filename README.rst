@@ -8,6 +8,11 @@ Adjust counter and timer metrics in `InfluxDB`_ or `StatsD`_ using the same API.
 The mix-in is configured through the ``tornado.web.Application`` settings
 property using a key defined by the specific mix-in.
 
+Documentation
+-------------
+https://sprocketsmixinsmetrics.readthedocs.io
+
+
 Statsd Mixin
 ------------
 
