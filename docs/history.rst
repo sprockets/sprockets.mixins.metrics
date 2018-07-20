@@ -3,6 +3,10 @@
 Release History
 ===============
 
+`3.1.0`_ (20-Jul-2018)
+----------------------
+- Add TCP support to StatsD
+
 `3.0.4`_ (31-Jan-2018)
 ----------------------
 - Loosen Tornado pin to include 4.4.
@@ -72,7 +76,8 @@ Release History
 - Add :class:`sprockets.mixins.metrics.InfluxDBMixin`
 - Add :class:`sprockets.mixins.metrics.influxdb.InfluxDBConnection`
 
-.. _Next Release: https://github.com/sprockets/sprockets.mixins.metrics/compare/3.0.4...master
+.. _Next Release: https://github.com/sprockets/sprockets.mixins.metrics/compare/3.1.0...master
+.. _3.1.0: https://github.com/sprockets/sprockets.mixins.metrics/compare/3.0.4...3.1.0
 .. _3.0.4: https://github.com/sprockets/sprockets.mixins.metrics/compare/3.0.3...3.0.4
 .. _3.0.3: https://github.com/sprockets/sprockets.mixins.metrics/compare/3.0.2...3.0.3
 .. _3.0.2: https://github.com/sprockets/sprockets.mixins.metrics/compare/3.0.1...3.0.2
