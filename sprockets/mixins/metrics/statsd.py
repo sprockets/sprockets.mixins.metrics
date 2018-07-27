@@ -123,9 +123,11 @@ class StatsDCollector(object):
 
         if protocol == 'tcp':
             self._tcp = True
+            self._msg_format = '{path}:{value}|{metric_type}\n'
             self._sock = self._tcp_socket()
         elif protocol == 'udp':
             self._tcp = False
+            self._msg_format = '{path}:{value}|{metric_type}'
             self._sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM, 0)
         else:
             raise ValueError('Invalid protocol: {}'.format(protocol))
@@ -160,9 +162,10 @@ class StatsDCollector(object):
         :param str metric_type: The metric type
 
         """
-        msg = '{0}:{1}|{2}'.format(
-            self._build_path(path, metric_type), value, metric_type)
-        msg = self._build_udp_or_tcp_message(msg)
+        msg = self._msg_format.format(
+            path=self._build_path(path, metric_type),
+            value=value,
+            metric_type=metric_type)
 
         LOGGER.debug('Sending %s to %s:%s', msg.encode('ascii'),
                      self._host, self._port)
@@ -174,12 +177,6 @@ class StatsDCollector(object):
             self._sock.sendto(msg.encode('ascii'), (self._host, self._port))
         except (OSError, socket.error) as error:  # pragma: nocover
             LOGGER.exception('Error sending statsd metric: %s', error)
-
-    def _build_udp_or_tcp_message(self, msg):
-        if self._tcp is False:
-            return msg
-
-        return msg + "\n"
 
     def _build_path(self, path, metric_type):
         """Return a normalized path.
