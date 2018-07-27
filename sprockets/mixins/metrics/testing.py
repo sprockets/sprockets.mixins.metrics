@@ -30,7 +30,7 @@ class FakeStatsdServer(tcpserver.TCPServer):
 
     """
 
-    PATTERN = br'(?P<path>[^:]*):(?P<value>[^|]*)\|(?P<type>.*)$'
+    TCP_PATTERN = br'(?P<path>[^:]*):(?P<value>[^|]*)\|(?P<type>.*)\n$'
 
     def __init__(self, iol, protocol='udp'):
         self.datagrams = []
@@ -71,7 +71,7 @@ class FakeStatsdServer(tcpserver.TCPServer):
     def handle_stream(self, stream, address):
         while True:
             try:
-                result = yield stream.read_until_regex(self.PATTERN)
+                result = yield stream.read_until_regex(self.TCP_PATTERN)
             except iostream.StreamClosedError:
                 break
             else:
