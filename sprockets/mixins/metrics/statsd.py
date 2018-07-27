@@ -162,6 +162,7 @@ class StatsDCollector(object):
         """
         msg = '{0}:{1}|{2}'.format(
             self._build_path(path, metric_type), value, metric_type)
+        msg = self._build_udp_or_tcp_message(msg)
 
         LOGGER.debug('Sending %s to %s:%s', msg.encode('ascii'),
                      self._host, self._port)
@@ -173,6 +174,12 @@ class StatsDCollector(object):
             self._sock.sendto(msg.encode('ascii'), (self._host, self._port))
         except (OSError, socket.error) as error:  # pragma: nocover
             LOGGER.exception('Error sending statsd metric: %s', error)
+
+    def _build_udp_or_tcp_message(self, msg):
+        if self._tcp is False:
+            return msg
+
+        return msg + "\n"
 
     def _build_path(self, path, metric_type):
         """Return a normalized path.

@@ -63,6 +63,13 @@ class TCPStatsdMetricCollectionTests(testing.AsyncHTTPTestCase):
                                             'protocol': 'tcp',
                                             'prepend_metric_type': True})
 
+    def test_that_tcp_message_appends_a_newline(self):
+        orig = 'testing.timers.SimpleHandler.GET.204'
+        expected = 'testing.timers.SimpleHandler.GET.204\n'
+
+        msg = self.application.statsd._build_udp_or_tcp_message(orig)
+        self.assertEqual(msg, expected)
+
     def test_that_http_method_call_is_recorded(self):
         response = self.fetch('/')
         self.assertEqual(response.code, 204)
@@ -170,6 +177,12 @@ class UDPStatsdMetricCollectionTests(testing.AsyncHTTPTestCase):
     def tearDown(self):
         self.statsd.close()
         super(UDPStatsdMetricCollectionTests, self).tearDown()
+
+    def test_that_udp_message_is_unchanged(self):
+        expected = 'testing.timers.SimpleHandler.GET.204'
+
+        msg = self.application.statsd._build_udp_or_tcp_message(expected)
+        self.assertEqual(msg, expected)
 
     def test_that_http_method_call_is_recorded(self):
         response = self.fetch('/')
