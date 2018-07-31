@@ -5,11 +5,11 @@ import os
 import socket
 import time
 import unittest
-from unittest.mock import patch
 import uuid
 
 from tornado import gen, iostream, testing, web
 import mock
+from mock import patch
 
 from sprockets.mixins.metrics import influxdb, statsd
 from sprockets.mixins.metrics.testing import (
