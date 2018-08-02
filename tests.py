@@ -72,9 +72,10 @@ class TCPStatsdMetricCollectionTests(testing.AsyncHTTPTestCase):
         path = ('foo', 'bar')
         value = 500
         metric_type = 'c'
-        expected = "{}:{}|{}\n".format('.'.join(itertools.chain((self.namespace, 'counters'), path)),
-                                        value,
-                                        metric_type)
+        expected = "{}:{}|{}\n".format('.'.join(
+                    itertools.chain((self.namespace, 'counters'), path)),
+                    value,
+                    metric_type)
 
         self.application.statsd.send(path, value, metric_type)
         mock_sock.assert_called_once_with(expected.encode())
@@ -84,9 +85,10 @@ class TCPStatsdMetricCollectionTests(testing.AsyncHTTPTestCase):
         path = ('foo', 'bar')
         value = 500
         metric_type = 'ms'
-        expected = "{}:{}|{}\n".format('.'.join(itertools.chain((self.namespace, 'timers'), path)),
-                                        value,
-                                        metric_type)
+        expected = "{}:{}|{}\n".format('.'.join(
+                    itertools.chain((self.namespace, 'timers'), path)),
+                    value,
+                    metric_type)
 
         self.application.statsd.send(path, value, metric_type)
         mock_sock.assert_called_once_with(expected.encode())
@@ -212,9 +214,10 @@ class UDPStatsdMetricCollectionTests(testing.AsyncHTTPTestCase):
         path = ('foo', 'bar')
         value = 500
         metric_type = 'c'
-        expected = "{}:{}|{}".format('.'.join(itertools.chain((self.namespace, 'counters'), path)),
-                                        value,
-                                        metric_type)
+        expected = "{}:{}|{}".format('.'.join(
+                    itertools.chain((self.namespace, 'counters'), path)),
+                    value,
+                    metric_type)
 
         self.application.statsd.send(path, value, metric_type)
         mock_sock.assert_called_once_with(
@@ -226,9 +229,10 @@ class UDPStatsdMetricCollectionTests(testing.AsyncHTTPTestCase):
         path = ('foo', 'bar')
         value = 500
         metric_type = 'ms'
-        expected = "{}:{}|{}".format('.'.join(itertools.chain((self.namespace, 'timers'), path)),
-                                        value,
-                                        metric_type)
+        expected = "{}:{}|{}".format('.'.join(
+                    itertools.chain((self.namespace, 'timers'), path)),
+                    value,
+                    metric_type)
 
         self.application.statsd.send(path, value, metric_type)
         mock_sock.assert_called_once_with(

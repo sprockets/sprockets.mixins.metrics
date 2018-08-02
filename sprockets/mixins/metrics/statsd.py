@@ -4,7 +4,7 @@ import os
 import socket
 import time
 
-from tornado import iostream
+from tornado import gen, iostream
 
 LOGGER = logging.getLogger(__name__)
 
@@ -137,17 +137,18 @@ class StatsDCollector(object):
         :rtype: iostream.IOStream
         """
         sock = iostream.IOStream(socket.socket(
-            socket.AF_INET, socket.SOCK_STREAM, socket.IPPROTO_TCP))
-        try:
-            sock.connect(self._address, self._tcp_on_connected)
-        except (OSError, socket.error) as error:
-            LOGGER.error('Failed to connect via TCP: %s', error)
+                    socket.AF_INET, socket.SOCK_STREAM, socket.IPPROTO_TCP))
+        sock.connect(self._address, self._tcp_on_connected)
         sock.set_close_callback(self._tcp_on_closed)
         return sock
 
+    @gen.engine
     def _tcp_on_closed(self):
         """Invoked when the socket is closed."""
-        LOGGER.warning('Disconnected from statsd, reconnecting')
+        sleep = 5
+        LOGGER.warning('Not connected to statsd, connecting in %s seconds',
+                       sleep)
+        yield gen.sleep(sleep)
         self._sock = self._tcp_socket()
 
     def _tcp_on_connected(self):
@@ -172,9 +173,13 @@ class StatsDCollector(object):
 
         try:
             if self._tcp:
+                if self._sock.closed():
+                    return
                 return self._sock.write(msg.encode('ascii'))
 
             self._sock.sendto(msg.encode('ascii'), (self._host, self._port))
+        except iostream.StreamClosedError as error:  # pragma: nocover
+            LOGGER.warning('Error sending TCP statsd metric: %s', error)
         except (OSError, socket.error) as error:  # pragma: nocover
             LOGGER.exception('Error sending statsd metric: %s', error)
 
