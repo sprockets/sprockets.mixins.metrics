@@ -120,6 +120,7 @@ class StatsDCollector(object):
         self._address = (self._host, self._port)
         self._namespace = namespace
         self._prepend_metric_type = prepend_metric_type
+        self._tcp_reconnect_sleep = 5
 
         if protocol == 'tcp':
             self._tcp = True
@@ -145,10 +146,9 @@ class StatsDCollector(object):
     @gen.engine
     def _tcp_on_closed(self):
         """Invoked when the socket is closed."""
-        sleep = 5
         LOGGER.warning('Not connected to statsd, connecting in %s seconds',
-                       sleep)
-        yield gen.sleep(sleep)
+                       self._tcp_reconnect_sleep)
+        yield gen.sleep(self._tcp_reconnect_sleep)
         self._sock = self._tcp_socket()
 
     def _tcp_on_connected(self):

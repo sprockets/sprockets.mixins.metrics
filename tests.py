@@ -44,6 +44,22 @@ def assert_between(low, value, high):
             value, low, high))
 
 
+class MisconfiguredStatsdMetricCollectionTests(testing.AsyncHTTPTestCase):
+
+    def get_app(self):
+        self.application = web.Application([
+            web.url('/', examples.statsd.SimpleHandler),
+            web.url('/counters/(.*)/([.0-9]*)', CounterBumper),
+            web.url('/status_code', DefaultStatusCode),
+        ])
+
+    def test_bad_protocol_raises_ValueError(self):
+        with self.assertRaises(ValueError):
+            statsd.StatsDCollector(host='127.0.0.1',
+                                   port=8125,
+                                   protocol='bad_protocol')
+
+
 class TCPStatsdMetricCollectionTests(testing.AsyncHTTPTestCase):
 
     def get_app(self):
@@ -66,6 +82,24 @@ class TCPStatsdMetricCollectionTests(testing.AsyncHTTPTestCase):
                                             'port': self.statsd.sockaddr[1],
                                             'protocol': 'tcp',
                                             'prepend_metric_type': True})
+
+    def test_tcp_reconnect_on_stream_close(self):
+        path_sleep = 'tornado.gen.sleep'
+        path_statsd = self.application.statsd
+        with mock.patch(path_sleep) as gen_sleep, \
+             patch.object(path_statsd, '_tcp_socket') as mock_tcp_socket:
+                f = web.Future()
+                f.set_result(None)
+                gen_sleep.return_value = f
+
+                self.application.statsd._tcp_on_closed()
+                mock_tcp_socket.assert_called_once_with()
+
+    @patch.object(iostream.IOStream, 'write')
+    def test_write_not_executed_when_connection_is_closed(self, mock_write):
+        self.application.statsd._sock.close()
+        self.application.statsd.send('foo', 500, 'c')
+        mock_write.assert_not_called()
 
     @patch.object(iostream.IOStream, 'write')
     def test_expected_counters_data_written(self, mock_sock):
