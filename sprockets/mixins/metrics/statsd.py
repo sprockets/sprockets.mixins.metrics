@@ -4,7 +4,7 @@ import os
 import socket
 import time
 
-from tornado import iostream
+from tornado import gen, iostream
 
 LOGGER = logging.getLogger(__name__)
 
@@ -120,12 +120,15 @@ class StatsDCollector(object):
         self._address = (self._host, self._port)
         self._namespace = namespace
         self._prepend_metric_type = prepend_metric_type
+        self._tcp_reconnect_sleep = 5
 
         if protocol == 'tcp':
             self._tcp = True
+            self._msg_format = '{path}:{value}|{metric_type}\n'
             self._sock = self._tcp_socket()
         elif protocol == 'udp':
             self._tcp = False
+            self._msg_format = '{path}:{value}|{metric_type}'
             self._sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM, 0)
         else:
             raise ValueError('Invalid protocol: {}'.format(protocol))
@@ -135,17 +138,17 @@ class StatsDCollector(object):
         :rtype: iostream.IOStream
         """
         sock = iostream.IOStream(socket.socket(
-            socket.AF_INET, socket.SOCK_STREAM, socket.IPPROTO_TCP))
-        try:
-            sock.connect(self._address, self._tcp_on_connected)
-        except (OSError, socket.error) as error:
-            LOGGER.error('Failed to connect via TCP: %s', error)
+                    socket.AF_INET, socket.SOCK_STREAM, socket.IPPROTO_TCP))
+        sock.connect(self._address, self._tcp_on_connected)
         sock.set_close_callback(self._tcp_on_closed)
         return sock
 
+    @gen.engine
     def _tcp_on_closed(self):
         """Invoked when the socket is closed."""
-        LOGGER.warning('Disconnected from statsd, reconnecting')
+        LOGGER.warning('Not connected to statsd, connecting in %s seconds',
+                       self._tcp_reconnect_sleep)
+        yield gen.sleep(self._tcp_reconnect_sleep)
         self._sock = self._tcp_socket()
 
     def _tcp_on_connected(self):
@@ -160,17 +163,23 @@ class StatsDCollector(object):
         :param str metric_type: The metric type
 
         """
-        msg = '{0}:{1}|{2}'.format(
-            self._build_path(path, metric_type), value, metric_type)
+        msg = self._msg_format.format(
+            path=self._build_path(path, metric_type),
+            value=value,
+            metric_type=metric_type)
 
         LOGGER.debug('Sending %s to %s:%s', msg.encode('ascii'),
                      self._host, self._port)
 
         try:
             if self._tcp:
+                if self._sock.closed():
+                    return
                 return self._sock.write(msg.encode('ascii'))
 
             self._sock.sendto(msg.encode('ascii'), (self._host, self._port))
+        except iostream.StreamClosedError as error:  # pragma: nocover
+            LOGGER.warning('Error sending TCP statsd metric: %s', error)
         except (OSError, socket.error) as error:  # pragma: nocover
             LOGGER.exception('Error sending statsd metric: %s', error)
 

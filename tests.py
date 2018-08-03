@@ -1,4 +1,5 @@
 import base64
+import itertools
 import logging
 import os
 import socket
@@ -6,8 +7,9 @@ import time
 import unittest
 import uuid
 
-from tornado import gen, testing, web
+from tornado import gen, iostream, testing, web
 import mock
+from mock import patch
 
 from sprockets.mixins.metrics import influxdb, statsd
 from sprockets.mixins.metrics.testing import (
@@ -42,6 +44,22 @@ def assert_between(low, value, high):
             value, low, high))
 
 
+class MisconfiguredStatsdMetricCollectionTests(testing.AsyncHTTPTestCase):
+
+    def get_app(self):
+        self.application = web.Application([
+            web.url('/', examples.statsd.SimpleHandler),
+            web.url('/counters/(.*)/([.0-9]*)', CounterBumper),
+            web.url('/status_code', DefaultStatusCode),
+        ])
+
+    def test_bad_protocol_raises_ValueError(self):
+        with self.assertRaises(ValueError):
+            statsd.StatsDCollector(host='127.0.0.1',
+                                   port=8125,
+                                   protocol='bad_protocol')
+
+
 class TCPStatsdMetricCollectionTests(testing.AsyncHTTPTestCase):
 
     def get_app(self):
@@ -54,14 +72,64 @@ class TCPStatsdMetricCollectionTests(testing.AsyncHTTPTestCase):
 
     def setUp(self):
         self.application = None
+        self.namespace = 'testing'
+
         super(TCPStatsdMetricCollectionTests, self).setUp()
         self.statsd = FakeStatsdServer(self.io_loop, protocol='tcp')
 
-        statsd.install(self.application, **{'namespace': 'testing',
+        statsd.install(self.application, **{'namespace': self.namespace,
                                             'host': self.statsd.sockaddr[0],
                                             'port': self.statsd.sockaddr[1],
                                             'protocol': 'tcp',
                                             'prepend_metric_type': True})
+
+    def test_tcp_reconnect_on_stream_close(self):
+        path_sleep = 'tornado.gen.sleep'
+        path_statsd = self.application.statsd
+        with mock.patch(path_sleep) as gen_sleep, \
+             patch.object(path_statsd, '_tcp_socket') as mock_tcp_socket:
+                f = web.Future()
+                f.set_result(None)
+                gen_sleep.return_value = f
+
+                self.application.statsd._tcp_on_closed()
+                mock_tcp_socket.assert_called_once_with()
+
+    @patch.object(iostream.IOStream, 'write')
+    def test_write_not_executed_when_connection_is_closed(self, mock_write):
+        self.application.statsd._sock.close()
+        self.application.statsd.send('foo', 500, 'c')
+        mock_write.assert_not_called()
+
+    @patch.object(iostream.IOStream, 'write')
+    def test_expected_counters_data_written(self, mock_sock):
+        path = ('foo', 'bar')
+        value = 500
+        metric_type = 'c'
+        expected = "{}:{}|{}\n".format('.'.join(
+                    itertools.chain((self.namespace, 'counters'), path)),
+                    value,
+                    metric_type)
+
+        self.application.statsd.send(path, value, metric_type)
+        mock_sock.assert_called_once_with(expected.encode())
+
+    @patch.object(iostream.IOStream, 'write')
+    def test_expected_timers_data_written(self, mock_sock):
+        path = ('foo', 'bar')
+        value = 500
+        metric_type = 'ms'
+        expected = "{}:{}|{}\n".format('.'.join(
+                    itertools.chain((self.namespace, 'timers'), path)),
+                    value,
+                    metric_type)
+
+        self.application.statsd.send(path, value, metric_type)
+        mock_sock.assert_called_once_with(expected.encode())
+
+    def test_tcp_message_format(self):
+        expected = '{path}:{value}|{metric_type}\n'
+        self.assertEqual(self.application.statsd._msg_format, expected)
 
     def test_that_http_method_call_is_recorded(self):
         response = self.fetch('/')
@@ -120,10 +188,12 @@ class TCPStatsdConfigurationTests(testing.AsyncHTTPTestCase):
 
     def setUp(self):
         self.application = None
+        self.namespace = 'testing'
+
         super(TCPStatsdConfigurationTests, self).setUp()
         self.statsd = FakeStatsdServer(self.io_loop, protocol='tcp')
 
-        statsd.install(self.application, **{'namespace': 'testing',
+        statsd.install(self.application, **{'namespace': self.namespace,
                                             'host': self.statsd.sockaddr[0],
                                             'port': self.statsd.sockaddr[1],
                                             'protocol': 'tcp',
@@ -158,10 +228,12 @@ class UDPStatsdMetricCollectionTests(testing.AsyncHTTPTestCase):
 
     def setUp(self):
         self.application = None
+        self.namespace = 'testing'
+
         super(UDPStatsdMetricCollectionTests, self).setUp()
         self.statsd = FakeStatsdServer(self.io_loop, protocol='udp')
 
-        statsd.install(self.application, **{'namespace': 'testing',
+        statsd.install(self.application, **{'namespace': self.namespace,
                                             'host': self.statsd.sockaddr[0],
                                             'port': self.statsd.sockaddr[1],
                                             'protocol': 'udp',
@@ -170,6 +242,40 @@ class UDPStatsdMetricCollectionTests(testing.AsyncHTTPTestCase):
     def tearDown(self):
         self.statsd.close()
         super(UDPStatsdMetricCollectionTests, self).tearDown()
+
+    @patch.object(socket.socket, 'sendto')
+    def test_expected_counters_data_written(self, mock_sock):
+        path = ('foo', 'bar')
+        value = 500
+        metric_type = 'c'
+        expected = "{}:{}|{}".format('.'.join(
+                    itertools.chain((self.namespace, 'counters'), path)),
+                    value,
+                    metric_type)
+
+        self.application.statsd.send(path, value, metric_type)
+        mock_sock.assert_called_once_with(
+                expected.encode(),
+                (self.statsd.sockaddr[0], self.statsd.sockaddr[1]))
+
+    @patch.object(socket.socket, 'sendto')
+    def test_expected_timers_data_written(self, mock_sock):
+        path = ('foo', 'bar')
+        value = 500
+        metric_type = 'ms'
+        expected = "{}:{}|{}".format('.'.join(
+                    itertools.chain((self.namespace, 'timers'), path)),
+                    value,
+                    metric_type)
+
+        self.application.statsd.send(path, value, metric_type)
+        mock_sock.assert_called_once_with(
+                expected.encode(),
+                (self.statsd.sockaddr[0], self.statsd.sockaddr[1]))
+
+    def test_udp_message_format(self):
+        expected = '{path}:{value}|{metric_type}'
+        self.assertEqual(self.application.statsd._msg_format, expected)
 
     def test_that_http_method_call_is_recorded(self):
         response = self.fetch('/')
@@ -228,10 +334,12 @@ class UDPStatsdConfigurationTests(testing.AsyncHTTPTestCase):
 
     def setUp(self):
         self.application = None
+        self.namespace = 'testing'
+
         super(UDPStatsdConfigurationTests, self).setUp()
         self.statsd = FakeStatsdServer(self.io_loop, protocol='udp')
 
-        statsd.install(self.application, **{'namespace': 'testing',
+        statsd.install(self.application, **{'namespace': self.namespace,
                                             'host': self.statsd.sockaddr[0],
                                             'port': self.statsd.sockaddr[1],
                                             'protocol': 'udp',
