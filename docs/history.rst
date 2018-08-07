@@ -3,6 +3,10 @@
 Release History
 ===============
 
+`3.1.1`_ (07-Aug-2018)
+----------------------
+- Fixed bad formatted TCP StatsD messages by appending a newline
+
 `3.1.0`_ (20-Jul-2018)
 ----------------------
 - Add TCP support to StatsD
@@ -10,7 +14,6 @@ Release History
 `3.0.4`_ (31-Jan-2018)
 ----------------------
 - Loosen Tornado pin to include 4.4.
-
 
 `3.0.3`_ (24-Mar-2017)
 ----------------------
