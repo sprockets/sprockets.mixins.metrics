@@ -5,7 +5,7 @@ Release History
 
 `3.1.1`_ (07-Aug-2018)
 ----------------------
-- Update TCP StatsD messages to append a newline
+- Fixed bad formatted TCP StatsD messages by appending a newline
 
 `3.1.0`_ (20-Jul-2018)
 ----------------------
