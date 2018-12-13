@@ -1,9 +1,10 @@
+import asyncio
 import itertools
 import socket
 import unittest
 from unittest import mock
 
-from tornado import gen, iostream, testing, web
+from tornado import iostream, testing, web
 
 from sprockets.mixins.metrics import statsd
 from sprockets.mixins.metrics.testing import FakeStatsdServer
@@ -12,10 +13,9 @@ import examples.statsd
 
 class CounterBumper(statsd.StatsdMixin, web.RequestHandler):
 
-    @gen.coroutine
-    def get(self, counter, value):
+    async def get(self, counter, value):
         with self.execution_timer(*counter.split('.')):
-            yield gen.sleep(float(value))
+            await asyncio.sleep(float(value))
         self.set_status(204)
         self.finish()
 
@@ -74,18 +74,6 @@ class TCPStatsdMetricCollectionTests(testing.AsyncHTTPTestCase):
                                             'port': self.statsd.sockaddr[1],
                                             'protocol': 'tcp',
                                             'prepend_metric_type': True})
-
-    def test_tcp_reconnect_on_stream_close(self):
-        path_sleep = 'tornado.gen.sleep'
-        path_statsd = self.application.statsd
-        with mock.patch(path_sleep) as gen_sleep, \
-             mock.patch.object(path_statsd, '_tcp_socket') as mock_tcp_socket:
-                f = web.Future()
-                f.set_result(None)
-                gen_sleep.return_value = f
-
-                self.application.statsd._tcp_on_closed()
-                mock_tcp_socket.assert_called_once_with()
 
     @mock.patch.object(iostream.IOStream, 'write')
     def test_write_not_executed_when_connection_is_closed(self, mock_write):

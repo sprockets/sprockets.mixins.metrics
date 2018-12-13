@@ -26,7 +26,7 @@ call to the ``get`` method as well as a separate metric for the database query.
 
    from sprockets.mixins import mediatype
    from sprockets.mixins.metrics import statsd
-   from tornado import gen, web
+   from tornado import web
    import queries
 
    def make_application():
@@ -47,10 +47,9 @@ call to the ``get`` method as well as a separate metric for the database query.
            super(MyHandler, self).initialize()
            self.db = queries.TornadoSession(os.environ['MY_PGSQL_DSN'])
 
-       @gen.coroutine
-       def get(self, obj_id):
+       async def get(self, obj_id):
            with self.execution_timer('dbquery', 'get'):
-              result = yield self.db.query('SELECT * FROM foo WHERE id=%s',
+              result = await self.db.query('SELECT * FROM foo WHERE id=%s',
                                            obj_id)
            self.send_response(result)
 

@@ -1,10 +1,11 @@
+import asyncio
 import contextlib
 import logging
 import os
 import socket
 import time
 
-from tornado import gen, iostream
+from tornado import iostream
 
 LOGGER = logging.getLogger(__name__)
 
@@ -134,12 +135,11 @@ class StatsDCollector:
         sock.set_close_callback(self._tcp_on_closed)
         return sock
 
-    @gen.engine
-    def _tcp_on_closed(self):
+    async def _tcp_on_closed(self):
         """Invoked when the socket is closed."""
         LOGGER.warning('Not connected to statsd, connecting in %s seconds',
                        self._tcp_reconnect_sleep)
-        yield gen.sleep(self._tcp_reconnect_sleep)
+        await asyncio.sleep(self._tcp_reconnect_sleep)
         self._sock = self._tcp_socket()
 
     def _tcp_on_connected(self):

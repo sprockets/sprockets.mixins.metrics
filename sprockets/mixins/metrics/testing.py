@@ -2,7 +2,7 @@ import logging
 import re
 import socket
 
-from tornado import gen, iostream, locks, tcpserver, testing
+from tornado import iostream, locks, tcpserver, testing
 
 LOGGER = logging.getLogger(__name__)
 
@@ -67,11 +67,10 @@ class FakeStatsdServer(tcpserver.TCPServer):
             self.socket.close()
             self.socket = None
 
-    @gen.coroutine
-    def handle_stream(self, stream, address):
+    async def handle_stream(self, stream, address):
         while True:
             try:
-                result = yield stream.read_until_regex(self.TCP_PATTERN)
+                result = await stream.read_until_regex(self.TCP_PATTERN)
             except iostream.StreamClosedError:
                 break
             else:
