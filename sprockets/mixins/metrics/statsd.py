@@ -12,11 +12,11 @@ SETTINGS_KEY = 'sprockets.mixins.metrics.statsd'
 """``self.settings`` key that configures this mix-in."""
 
 
-class StatsdMixin(object):
+class StatsdMixin:
     """Mix this class in to record metrics to a Statsd server."""
 
     def initialize(self):
-        super(StatsdMixin, self).initialize()
+        super().initialize()
 
     def record_timing(self, duration, *path):
         """Record a timing.
@@ -79,13 +79,13 @@ class StatsdMixin(object):
         to send the metric, so the configured namespace is used as well.
 
         """
-        super(StatsdMixin, self).on_finish()
+        super().on_finish()
         self.record_timing(self.request.request_time(),
                            self.__class__.__name__, self.request.method,
                            self.get_status())
 
 
-class StatsDCollector(object):
+class StatsDCollector:
     """Collects and submits stats to StatsD.
 
      This class should be constructed using the

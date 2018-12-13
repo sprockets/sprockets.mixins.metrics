@@ -44,7 +44,7 @@ class FakeStatsdServer(tcpserver.TCPServer):
 
     def tcp_server(self):
         self.event = locks.Event()
-        super(FakeStatsdServer, self).__init__()
+        super().__init__()
 
         sock, port = testing.bind_unused_port()
         self.add_socket(sock)

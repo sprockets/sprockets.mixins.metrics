@@ -1,10 +1,9 @@
 import itertools
 import socket
 import unittest
+from unittest import mock
 
 from tornado import gen, iostream, testing, web
-import mock
-from mock import patch
 
 from sprockets.mixins.metrics import statsd
 from sprockets.mixins.metrics.testing import FakeStatsdServer
@@ -67,7 +66,7 @@ class TCPStatsdMetricCollectionTests(testing.AsyncHTTPTestCase):
         self.application = None
         self.namespace = 'testing'
 
-        super(TCPStatsdMetricCollectionTests, self).setUp()
+        super().setUp()
         self.statsd = FakeStatsdServer(self.io_loop, protocol='tcp')
 
         statsd.install(self.application, **{'namespace': self.namespace,
@@ -80,7 +79,7 @@ class TCPStatsdMetricCollectionTests(testing.AsyncHTTPTestCase):
         path_sleep = 'tornado.gen.sleep'
         path_statsd = self.application.statsd
         with mock.patch(path_sleep) as gen_sleep, \
-             patch.object(path_statsd, '_tcp_socket') as mock_tcp_socket:
+             mock.patch.object(path_statsd, '_tcp_socket') as mock_tcp_socket:
                 f = web.Future()
                 f.set_result(None)
                 gen_sleep.return_value = f
@@ -88,13 +87,13 @@ class TCPStatsdMetricCollectionTests(testing.AsyncHTTPTestCase):
                 self.application.statsd._tcp_on_closed()
                 mock_tcp_socket.assert_called_once_with()
 
-    @patch.object(iostream.IOStream, 'write')
+    @mock.patch.object(iostream.IOStream, 'write')
     def test_write_not_executed_when_connection_is_closed(self, mock_write):
         self.application.statsd._sock.close()
         self.application.statsd.send('foo', 500, 'c')
         mock_write.assert_not_called()
 
-    @patch.object(iostream.IOStream, 'write')
+    @mock.patch.object(iostream.IOStream, 'write')
     def test_expected_counters_data_written(self, mock_sock):
         path = ('foo', 'bar')
         value = 500
@@ -107,7 +106,7 @@ class TCPStatsdMetricCollectionTests(testing.AsyncHTTPTestCase):
         self.application.statsd.send(path, value, metric_type)
         mock_sock.assert_called_once_with(expected.encode())
 
-    @patch.object(iostream.IOStream, 'write')
+    @mock.patch.object(iostream.IOStream, 'write')
     def test_expected_timers_data_written(self, mock_sock):
         path = ('foo', 'bar')
         value = 500
@@ -183,7 +182,7 @@ class TCPStatsdConfigurationTests(testing.AsyncHTTPTestCase):
         self.application = None
         self.namespace = 'testing'
 
-        super(TCPStatsdConfigurationTests, self).setUp()
+        super().setUp()
         self.statsd = FakeStatsdServer(self.io_loop, protocol='tcp')
 
         statsd.install(self.application, **{'namespace': self.namespace,
@@ -223,7 +222,7 @@ class UDPStatsdMetricCollectionTests(testing.AsyncHTTPTestCase):
         self.application = None
         self.namespace = 'testing'
 
-        super(UDPStatsdMetricCollectionTests, self).setUp()
+        super().setUp()
         self.statsd = FakeStatsdServer(self.io_loop, protocol='udp')
 
         statsd.install(self.application, **{'namespace': self.namespace,
@@ -234,9 +233,9 @@ class UDPStatsdMetricCollectionTests(testing.AsyncHTTPTestCase):
 
     def tearDown(self):
         self.statsd.close()
-        super(UDPStatsdMetricCollectionTests, self).tearDown()
+        super().tearDown()
 
-    @patch.object(socket.socket, 'sendto')
+    @mock.patch.object(socket.socket, 'sendto')
     def test_expected_counters_data_written(self, mock_sock):
         path = ('foo', 'bar')
         value = 500
@@ -251,7 +250,7 @@ class UDPStatsdMetricCollectionTests(testing.AsyncHTTPTestCase):
                 expected.encode(),
                 (self.statsd.sockaddr[0], self.statsd.sockaddr[1]))
 
-    @patch.object(socket.socket, 'sendto')
+    @mock.patch.object(socket.socket, 'sendto')
     def test_expected_timers_data_written(self, mock_sock):
         path = ('foo', 'bar')
         value = 500
@@ -329,7 +328,7 @@ class UDPStatsdConfigurationTests(testing.AsyncHTTPTestCase):
         self.application = None
         self.namespace = 'testing'
 
-        super(UDPStatsdConfigurationTests, self).setUp()
+        super().setUp()
         self.statsd = FakeStatsdServer(self.io_loop, protocol='udp')
 
         statsd.install(self.application, **{'namespace': self.namespace,
@@ -340,7 +339,7 @@ class UDPStatsdConfigurationTests(testing.AsyncHTTPTestCase):
 
     def tearDown(self):
         self.statsd.close()
-        super(UDPStatsdConfigurationTests, self).tearDown()
+        super().tearDown()
 
     def test_that_http_method_call_is_recorded(self):
         response = self.fetch('/')
