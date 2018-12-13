@@ -18,15 +18,6 @@ class StatsdMixin(object):
     def initialize(self):
         super(StatsdMixin, self).initialize()
 
-    def set_metric_tag(self, tag, value):
-        """Ignored for statsd since it does not support tagging.
-
-        :param str tag: name of the tag to set
-        :param str value: value to assign
-
-        """
-        pass
-
     def record_timing(self, duration, *path):
         """Record a timing.
 
