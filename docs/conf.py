@@ -1,4 +1,3 @@
-import alabaster
 from sprockets.mixins import metrics
 
 project = 'sprockets.mixins.metrics'
