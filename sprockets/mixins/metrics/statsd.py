@@ -16,9 +16,6 @@ SETTINGS_KEY = 'sprockets.mixins.metrics.statsd'
 class StatsdMixin:
     """Mix this class in to record metrics to a Statsd server."""
 
-    def initialize(self):
-        super().initialize()
-
     def record_timing(self, duration, *path):
         """Record a timing.
 
