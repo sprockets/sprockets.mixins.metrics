@@ -1,28 +1,11 @@
-#!/usr/bin/env python
-#
-
-import os.path
+import pathlib
 
 import setuptools
 
 from sprockets.mixins import metrics
 
 
-def read_requirements(name):
-    requirements = []
-    try:
-        with open(os.path.join('requires', name)) as req_file:
-            for line in req_file:
-                if '#' in line:
-                    line = line[:line.index('#')]
-                line = line.strip()
-                if line.startswith('-r'):
-                    requirements.extend(read_requirements(line[2:].strip()))
-                elif line and not line.startswith('-'):
-                    requirements.append(line)
-    except IOError:
-        pass
-    return requirements
+REPO = pathlib.Path(__file__).parent
 
 
 setuptools.setup(
@@ -34,8 +17,8 @@ setuptools.setup(
     author_email='api@aweber.com',
     license='BSD',
     url='https://github.com/sprockets/sprockets.mixins.metrics',
-    install_requires=read_requirements('installation.txt'),
-    tests_require=read_requirements('testing.txt'),
+    install_requires=REPO.joinpath('requires/installation.txt').read_text(),
+    tests_require=REPO.joinpath('requires/testing.txt').read_text(),
     packages=setuptools.find_packages(exclude=['examples.']),
     namespace_packages=['sprockets', 'sprockets.mixins'],
     classifiers=[
