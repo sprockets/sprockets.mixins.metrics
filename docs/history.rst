@@ -3,6 +3,15 @@
 Release History
 ===============
 
+`Next`_
+-------
+- Add support for Tornado 5
+- Remove support for Tornado < 5
+- Remove support for Python < 3.7
+- Remove InfluxDB support (use `sprockets-influxdb`_)
+
+.. _sprockets-influxdb: https://github.com/sprockets/sprockets-influxdb
+
 `3.1.1`_ (07-Aug-2018)
 ----------------------
 - Fixed bad formatted TCP StatsD messages by appending a newline
@@ -79,7 +88,7 @@ Release History
 - Add :class:`sprockets.mixins.metrics.InfluxDBMixin`
 - Add :class:`sprockets.mixins.metrics.influxdb.InfluxDBConnection`
 
-.. _Next Release: https://github.com/sprockets/sprockets.mixins.metrics/compare/3.1.1...master
+.. _Next: https://github.com/sprockets/sprockets.mixins.metrics/compare/3.1.1...master
 .. _3.1.1: https://github.com/sprockets/sprockets.mixins.metrics/compare/3.1.0...3.1.1
 .. _3.1.0: https://github.com/sprockets/sprockets.mixins.metrics/compare/3.0.4...3.1.0
 .. _3.0.4: https://github.com/sprockets/sprockets.mixins.metrics/compare/3.0.3...3.0.4
