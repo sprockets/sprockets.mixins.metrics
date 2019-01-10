@@ -1,18 +1,14 @@
 language: python
+dist: xenial
 python:
-- 2.7
-- 3.4
-- 3.5
-- 3.6
-- 3.7-dev
-- pypy
-- pypy3
-before_install:
-- pip install nose coverage codecov
-- pip install -r requires/testing.txt
+- 3.7
 install:
-- pip install -e .
-script: nosetests --with-coverage
+- pip install -r requires/development.txt
+script:
+- nosetests --with-coverage
+- python setup.py build_sphinx
+- python setup.py check
+- flake8
 after_success:
 - codecov
 sudo: false
@@ -25,4 +21,4 @@ deploy:
     tags: true
     distributions: sdist bdist_wheel
     all_branches: true
-    python: 3.6
+    python: 3.7

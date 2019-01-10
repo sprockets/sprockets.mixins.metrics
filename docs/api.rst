@@ -43,28 +43,10 @@ implements the same interface:
          with self.execution_timer('db', 'query', 'foo'):
              rows = yield self.session.query('SELECT * FROM foo')
 
-   .. method:: set_metric_tag(tag, value)
-      :noindex:
-
-      :param str tag: the tag to set
-      :param str value: the value to assign to the tag
-
-      This method stores a tag and value pair to be reported with
-      metrics.  It is only implemented on back-ends that support
-      tagging metrics (e.g., :class:`sprockets.mixins.metrics.InfluxDBMixin`)
-
 
 Statsd Implementation
 ---------------------
 .. autoclass:: sprockets.mixins.metrics.statsd.StatsdMixin
-   :members:
-
-InfluxDB Implementation
------------------------
-.. autoclass:: sprockets.mixins.metrics.influxdb.InfluxDBMixin
-   :members:
-
-.. autoclass:: sprockets.mixins.metrics.influxdb.InfluxDBCollector
    :members:
 
 Testing Helpers
@@ -75,7 +57,4 @@ Usually the answer is *no one*.  Why is that?  The ``testing`` module
 contains some helper that make testing a little easier.
 
 .. autoclass:: sprockets.mixins.metrics.testing.FakeStatsdServer
-   :members:
-
-.. autoclass:: sprockets.mixins.metrics.testing.FakeInfluxHandler
    :members:

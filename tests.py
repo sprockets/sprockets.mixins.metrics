@@ -1,29 +1,21 @@
-import base64
+import asyncio
 import itertools
-import logging
-import os
 import socket
-import time
 import unittest
-import uuid
+from unittest import mock
 
-from tornado import gen, iostream, testing, web
-import mock
-from mock import patch
+from tornado import iostream, testing, web
 
-from sprockets.mixins.metrics import influxdb, statsd
-from sprockets.mixins.metrics.testing import (
-    FakeInfluxHandler, FakeStatsdServer)
-import examples.influxdb
+from sprockets.mixins.metrics import statsd
+from sprockets.mixins.metrics.testing import FakeStatsdServer
 import examples.statsd
 
 
 class CounterBumper(statsd.StatsdMixin, web.RequestHandler):
 
-    @gen.coroutine
-    def get(self, counter, value):
+    async def get(self, counter, value):
         with self.execution_timer(*counter.split('.')):
-            yield gen.sleep(float(value))
+            await asyncio.sleep(float(value))
         self.set_status(204)
         self.finish()
 
@@ -74,7 +66,7 @@ class TCPStatsdMetricCollectionTests(testing.AsyncHTTPTestCase):
         self.application = None
         self.namespace = 'testing'
 
-        super(TCPStatsdMetricCollectionTests, self).setUp()
+        super().setUp()
         self.statsd = FakeStatsdServer(self.io_loop, protocol='tcp')
 
         statsd.install(self.application, **{'namespace': self.namespace,
@@ -83,25 +75,13 @@ class TCPStatsdMetricCollectionTests(testing.AsyncHTTPTestCase):
                                             'protocol': 'tcp',
                                             'prepend_metric_type': True})
 
-    def test_tcp_reconnect_on_stream_close(self):
-        path_sleep = 'tornado.gen.sleep'
-        path_statsd = self.application.statsd
-        with mock.patch(path_sleep) as gen_sleep, \
-             patch.object(path_statsd, '_tcp_socket') as mock_tcp_socket:
-                f = web.Future()
-                f.set_result(None)
-                gen_sleep.return_value = f
-
-                self.application.statsd._tcp_on_closed()
-                mock_tcp_socket.assert_called_once_with()
-
-    @patch.object(iostream.IOStream, 'write')
+    @mock.patch.object(iostream.IOStream, 'write')
     def test_write_not_executed_when_connection_is_closed(self, mock_write):
         self.application.statsd._sock.close()
         self.application.statsd.send('foo', 500, 'c')
         mock_write.assert_not_called()
 
-    @patch.object(iostream.IOStream, 'write')
+    @mock.patch.object(iostream.IOStream, 'write')
     def test_expected_counters_data_written(self, mock_sock):
         path = ('foo', 'bar')
         value = 500
@@ -114,7 +94,7 @@ class TCPStatsdMetricCollectionTests(testing.AsyncHTTPTestCase):
         self.application.statsd.send(path, value, metric_type)
         mock_sock.assert_called_once_with(expected.encode())
 
-    @patch.object(iostream.IOStream, 'write')
+    @mock.patch.object(iostream.IOStream, 'write')
     def test_expected_timers_data_written(self, mock_sock):
         path = ('foo', 'bar')
         value = 500
@@ -190,7 +170,7 @@ class TCPStatsdConfigurationTests(testing.AsyncHTTPTestCase):
         self.application = None
         self.namespace = 'testing'
 
-        super(TCPStatsdConfigurationTests, self).setUp()
+        super().setUp()
         self.statsd = FakeStatsdServer(self.io_loop, protocol='tcp')
 
         statsd.install(self.application, **{'namespace': self.namespace,
@@ -230,7 +210,7 @@ class UDPStatsdMetricCollectionTests(testing.AsyncHTTPTestCase):
         self.application = None
         self.namespace = 'testing'
 
-        super(UDPStatsdMetricCollectionTests, self).setUp()
+        super().setUp()
         self.statsd = FakeStatsdServer(self.io_loop, protocol='udp')
 
         statsd.install(self.application, **{'namespace': self.namespace,
@@ -241,9 +221,9 @@ class UDPStatsdMetricCollectionTests(testing.AsyncHTTPTestCase):
 
     def tearDown(self):
         self.statsd.close()
-        super(UDPStatsdMetricCollectionTests, self).tearDown()
+        super().tearDown()
 
-    @patch.object(socket.socket, 'sendto')
+    @mock.patch.object(socket.socket, 'sendto')
     def test_expected_counters_data_written(self, mock_sock):
         path = ('foo', 'bar')
         value = 500
@@ -258,7 +238,7 @@ class UDPStatsdMetricCollectionTests(testing.AsyncHTTPTestCase):
                 expected.encode(),
                 (self.statsd.sockaddr[0], self.statsd.sockaddr[1]))
 
-    @patch.object(socket.socket, 'sendto')
+    @mock.patch.object(socket.socket, 'sendto')
     def test_expected_timers_data_written(self, mock_sock):
         path = ('foo', 'bar')
         value = 500
@@ -336,7 +316,7 @@ class UDPStatsdConfigurationTests(testing.AsyncHTTPTestCase):
         self.application = None
         self.namespace = 'testing'
 
-        super(UDPStatsdConfigurationTests, self).setUp()
+        super().setUp()
         self.statsd = FakeStatsdServer(self.io_loop, protocol='udp')
 
         statsd.install(self.application, **{'namespace': self.namespace,
@@ -347,7 +327,7 @@ class UDPStatsdConfigurationTests(testing.AsyncHTTPTestCase):
 
     def tearDown(self):
         self.statsd.close()
-        super(UDPStatsdConfigurationTests, self).tearDown()
+        super().tearDown()
 
     def test_that_http_method_call_is_recorded(self):
         response = self.fetch('/')
@@ -389,172 +369,3 @@ class StatsdInstallationTests(unittest.TestCase):
         statsd.install(self.application, **{'namespace': 'testing'})
         self.assertEqual(self.application.statsd._host, '127.0.0.1')
         self.assertEqual(self.application.statsd._port, 8125)
-
-
-class InfluxDbTests(testing.AsyncHTTPTestCase):
-
-    def get_app(self):
-        self.application = web.Application([
-            web.url(r'/', examples.influxdb.SimpleHandler),
-            web.url(r'/write', FakeInfluxHandler),
-        ])
-        influxdb.install(self.application, **{'database': 'requests',
-                                              'submission_interval': 1,
-                                              'url': self.get_url('/write')})
-        self.application.influx_db = {}
-        return self.application
-
-    def setUp(self):
-        self.application = None
-        super(InfluxDbTests, self).setUp()
-        self.application.settings[influxdb.SETTINGS_KEY] = {
-            'measurement': 'my-service'
-        }
-        logging.getLogger(FakeInfluxHandler.__module__).setLevel(logging.DEBUG)
-
-    @gen.coroutine
-    def tearDown(self):
-        yield influxdb.shutdown(self.application)
-        super(InfluxDbTests, self).tearDown()
-
-    @property
-    def influx_messages(self):
-        return FakeInfluxHandler.get_messages(self.application, self)
-
-    def test_that_http_method_call_details_are_recorded(self):
-        start = int(time.time())
-        response = self.fetch('/')
-        self.assertEqual(response.code, 204)
-
-        for key, fields, timestamp, _headers in self.influx_messages:
-            if key.startswith('my-service,'):
-                tag_dict = dict(a.split('=') for a in key.split(',')[1:])
-                self.assertEqual(tag_dict['handler'],
-                                 'examples.influxdb.SimpleHandler')
-                self.assertEqual(tag_dict['method'], 'GET')
-                self.assertEqual(tag_dict['hostname'], socket.gethostname())
-                self.assertEqual(tag_dict['status_code'], '204')
-
-                value_dict = dict(a.split('=') for a in fields.split(','))
-                self.assertIn('duration', value_dict)
-                self.assertTrue(float(value_dict['duration']) > 0)
-
-                nanos_since_epoch = int(timestamp)
-                then = nanos_since_epoch / 1000000000
-                assert_between(start, then, time.time())
-                break
-        else:
-            self.fail('Expected to find "request" metric in {!r}'.format(
-                list(self.application.influx_db['requests'])))
-
-    def test_that_execution_timer_is_tracked(self):
-        response = self.fetch('/')
-        self.assertEqual(response.code, 204)
-
-        for key, fields, timestamp, _headers in self.influx_messages:
-            if key.startswith('my-service,'):
-                value_dict = dict(a.split('=') for a in fields.split(','))
-                assert_between(0.25, float(value_dict['sleepytime']), 0.3)
-                break
-        else:
-            self.fail('Expected to find "request" metric in {!r}'.format(
-                list(self.application.influx_db['requests'])))
-
-    def test_that_counter_is_tracked(self):
-        response = self.fetch('/')
-        self.assertEqual(response.code, 204)
-
-        for key, fields, timestamp, _headers in self.influx_messages:
-            if key.startswith('my-service,'):
-                value_dict = dict(a.split('=') for a in fields.split(','))
-                self.assertEqual(int(value_dict['slept']), 42)
-                break
-        else:
-            self.fail('Expected to find "request" metric in {!r}'.format(
-                      list(self.application.influx_db['requests'])))
-
-    def test_that_cached_db_connection_is_used(self):
-        cfg = self.application.settings[influxdb.SETTINGS_KEY]
-        conn = mock.Mock()
-        cfg['db_connection'] = conn
-        response = self.fetch('/')
-        self.assertEqual(response.code, 204)
-        self.assertIs(cfg['db_connection'], conn)
-
-    def test_that_metric_tag_is_tracked(self):
-        cid = str(uuid.uuid4())
-        response = self.fetch('/', headers={'Correlation-ID': cid})
-        self.assertEqual(response.code, 204)
-
-        for key, fields, timestamp, _headers in self.influx_messages:
-            if key.startswith('my-service,'):
-                tag_dict = dict(a.split('=') for a in key.split(',')[1:])
-                self.assertEqual(tag_dict['correlation_id'], cid)
-                break
-        else:
-            self.fail('Expected to find "request" metric in {!r}'.format(
-                      list(self.application.influx_db['requests'])))
-
-    def test_metrics_with_buffer_not_flush(self):
-        self.application.settings[influxdb] = {
-            'measurement': 'my-service'
-        }
-
-        # 2 requests
-        response = self.fetch('/')
-        self.assertEqual(response.code, 204)
-        response = self.fetch('/')
-        self.assertEqual(response.code, 204)
-        with self.assertRaises(AssertionError):
-            self.assertEqual(0, len(self.influx_messages))
-
-
-class InfluxDbAuthTests(testing.AsyncHTTPTestCase):
-
-    def setUp(self):
-        self.application = None
-        self.username, self.password = str(uuid.uuid4()), str(uuid.uuid4())
-        os.environ['INFLUX_USER'] = self.username
-        os.environ['INFLUX_PASSWORD'] = self.password
-        super(InfluxDbAuthTests, self).setUp()
-        self.application.settings[influxdb.SETTINGS_KEY] = {
-            'measurement': 'my-service'
-        }
-        logging.getLogger(FakeInfluxHandler.__module__).setLevel(logging.DEBUG)
-
-    @gen.coroutine
-    def tearDown(self):
-        yield influxdb.shutdown(self.application)
-        super(InfluxDbAuthTests, self).tearDown()
-
-    @property
-    def influx_messages(self):
-        return FakeInfluxHandler.get_messages(self.application, self)
-
-    def get_app(self):
-        self.application = web.Application([
-            web.url(r'/', examples.influxdb.SimpleHandler),
-            web.url(r'/write', FakeInfluxHandler),
-        ])
-        influxdb.install(self.application, **{'database': 'requests',
-                                              'submission_interval': 1,
-                                              'url': self.get_url('/write')})
-        self.application.influx_db = {}
-        return self.application
-
-    def test_that_authentication_header_was_sent(self):
-        print(os.environ)
-        response = self.fetch('/')
-        self.assertEqual(response.code, 204)
-
-        for _key, _fields, _timestamp, headers in self.influx_messages:
-            self.assertIn('Authorization', headers)
-            scheme, value = headers['Authorization'].split(' ')
-            self.assertEqual(scheme, 'Basic')
-            temp = base64.b64decode(value.encode('utf-8'))
-            values = temp.decode('utf-8').split(':')
-            self.assertEqual(values[0], self.username)
-            self.assertEqual(values[1], self.password)
-            break
-        else:
-            self.fail('Did not have an Authorization header')

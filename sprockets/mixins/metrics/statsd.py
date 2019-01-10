@@ -1,10 +1,11 @@
+import asyncio
 import contextlib
 import logging
 import os
 import socket
 import time
 
-from tornado import gen, iostream
+from tornado import iostream
 
 LOGGER = logging.getLogger(__name__)
 
@@ -12,20 +13,8 @@ SETTINGS_KEY = 'sprockets.mixins.metrics.statsd'
 """``self.settings`` key that configures this mix-in."""
 
 
-class StatsdMixin(object):
+class StatsdMixin:
     """Mix this class in to record metrics to a Statsd server."""
-
-    def initialize(self):
-        super(StatsdMixin, self).initialize()
-
-    def set_metric_tag(self, tag, value):
-        """Ignored for statsd since it does not support tagging.
-
-        :param str tag: name of the tag to set
-        :param str value: value to assign
-
-        """
-        pass
 
     def record_timing(self, duration, *path):
         """Record a timing.
@@ -88,13 +77,13 @@ class StatsdMixin(object):
         to send the metric, so the configured namespace is used as well.
 
         """
-        super(StatsdMixin, self).on_finish()
+        super().on_finish()
         self.record_timing(self.request.request_time(),
                            self.__class__.__name__, self.request.method,
                            self.get_status())
 
 
-class StatsDCollector(object):
+class StatsDCollector:
     """Collects and submits stats to StatsD.
 
      This class should be constructed using the
@@ -143,12 +132,11 @@ class StatsDCollector(object):
         sock.set_close_callback(self._tcp_on_closed)
         return sock
 
-    @gen.engine
-    def _tcp_on_closed(self):
+    async def _tcp_on_closed(self):
         """Invoked when the socket is closed."""
         LOGGER.warning('Not connected to statsd, connecting in %s seconds',
                        self._tcp_reconnect_sleep)
-        yield gen.sleep(self._tcp_reconnect_sleep)
+        await asyncio.sleep(self._tcp_reconnect_sleep)
         self._sock = self._tcp_socket()
 
     def _tcp_on_connected(self):
