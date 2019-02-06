@@ -3,8 +3,8 @@
 Release History
 ===============
 
-`Next`_
--------
+`4.0.0`_ (06-Feb-2019)
+----------------------
 - Add support for Tornado 5
 - Remove support for Tornado < 5
 - Remove support for Python < 3.7
@@ -88,7 +88,8 @@ Release History
 - Add :class:`sprockets.mixins.metrics.InfluxDBMixin`
 - Add :class:`sprockets.mixins.metrics.influxdb.InfluxDBConnection`
 
-.. _Next: https://github.com/sprockets/sprockets.mixins.metrics/compare/3.1.1...master
+.. _Next Release: https://github.com/sprockets/sprockets.mixins.metrics/compare/4.0.0...master
+.. _4.0.0: https://github.com/sprockets/sprockets.mixins.metrics/compare/3.1.1...4.0.0
 .. _3.1.1: https://github.com/sprockets/sprockets.mixins.metrics/compare/3.1.0...3.1.1
 .. _3.1.0: https://github.com/sprockets/sprockets.mixins.metrics/compare/3.0.4...3.1.0
 .. _3.0.4: https://github.com/sprockets/sprockets.mixins.metrics/compare/3.0.3...3.0.4
