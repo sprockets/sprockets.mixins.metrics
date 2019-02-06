@@ -1,3 +1,6 @@
+#!/usr/bin/python
+#
+
 import pathlib
 
 import setuptools
