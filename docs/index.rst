@@ -8,6 +8,7 @@ License
    :hidden:
 
    api
+   configuration
    examples
    contributing
    history

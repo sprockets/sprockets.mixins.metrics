@@ -3,6 +3,10 @@
 Release History
 ===============
 
+`Next Release`_
+---------------
+- Add configuration documentation
+
 `4.0.0`_ (06-Feb-2019)
 ----------------------
 - Add support for Tornado 5
