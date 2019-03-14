@@ -6,6 +6,7 @@ Release History
 `Next Release`_
 ---------------
 - Add configuration documentation
+- Exclude Tornado >6 (as-yet-unreleased version)
 
 `4.0.0`_ (06-Feb-2019)
 ----------------------

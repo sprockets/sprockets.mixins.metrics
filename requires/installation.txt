@@ -1,1 +1,1 @@
-tornado>=5
+tornado>=5,<7
