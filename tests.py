@@ -155,6 +155,13 @@ class TCPStatsdMetricCollectionTests(testing.AsyncHTTPTestCase):
         self.assertEqual(expected,
                          list(self.statsd.find_metrics(expected, 'ms'))[0][0])
 
+    def test_reconnect_logic(self):
+        self.application.statsd._tcp_reconnect_sleep = 0.05
+        self.application.statsd._sock.close()
+        asyncio.get_event_loop().run_until_complete(asyncio.sleep(0.075))
+        response = self.fetch('/status_code')
+        self.assertEqual(response.code, 200)
+
 
 class TCPStatsdConfigurationTests(testing.AsyncHTTPTestCase):
 
