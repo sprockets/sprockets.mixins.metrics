@@ -1,8 +1,7 @@
 import asyncio
 import itertools
 import socket
-import unittest
-from unittest import mock
+import unittest.mock
 
 from tornado import iostream, testing, web
 
@@ -48,7 +47,7 @@ class MisconfiguredStatsdMetricCollectionTests(testing.AsyncHTTPTestCase):
     def test_bad_protocol_raises_ValueError(self):
         with self.assertRaises(ValueError):
             statsd.StatsDCollector(host='127.0.0.1',
-                                   port=8125,
+                                   port='8125',
                                    protocol='bad_protocol')
 
 
@@ -75,13 +74,13 @@ class TCPStatsdMetricCollectionTests(testing.AsyncHTTPTestCase):
                                             'protocol': 'tcp',
                                             'prepend_metric_type': True})
 
-    @mock.patch.object(iostream.IOStream, 'write')
+    @unittest.mock.patch.object(iostream.IOStream, 'write')
     def test_write_not_executed_when_connection_is_closed(self, mock_write):
         self.application.statsd._sock.close()
         self.application.statsd.send('foo', 500, 'c')
         mock_write.assert_not_called()
 
-    @mock.patch.object(iostream.IOStream, 'write')
+    @unittest.mock.patch.object(iostream.IOStream, 'write')
     def test_expected_counters_data_written(self, mock_sock):
         path = ('foo', 'bar')
         value = 500
@@ -94,7 +93,7 @@ class TCPStatsdMetricCollectionTests(testing.AsyncHTTPTestCase):
         self.application.statsd.send(path, value, metric_type)
         mock_sock.assert_called_once_with(expected.encode())
 
-    @mock.patch.object(iostream.IOStream, 'write')
+    @unittest.mock.patch.object(iostream.IOStream, 'write')
     def test_expected_timers_data_written(self, mock_sock):
         path = ('foo', 'bar')
         value = 500
@@ -223,7 +222,7 @@ class UDPStatsdMetricCollectionTests(testing.AsyncHTTPTestCase):
         self.statsd.close()
         super().tearDown()
 
-    @mock.patch.object(socket.socket, 'sendto')
+    @unittest.mock.patch.object(socket.socket, 'sendto')
     def test_expected_counters_data_written(self, mock_sock):
         path = ('foo', 'bar')
         value = 500
@@ -238,7 +237,7 @@ class UDPStatsdMetricCollectionTests(testing.AsyncHTTPTestCase):
                 expected.encode(),
                 (self.statsd.sockaddr[0], self.statsd.sockaddr[1]))
 
-    @mock.patch.object(socket.socket, 'sendto')
+    @unittest.mock.patch.object(socket.socket, 'sendto')
     def test_expected_timers_data_written(self, mock_sock):
         path = ('foo', 'bar')
         value = 500
