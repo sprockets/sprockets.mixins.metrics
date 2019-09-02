@@ -7,6 +7,7 @@ Release History
 ---------------
 - Add configuration documentation
 - Exclude Tornado >6 (as-yet-unreleased version)
+- Add :func:`sprockets.mixins.metrics.statsd.get_client` function
 
 `4.0.0`_ (06-Feb-2019)
 ----------------------

@@ -29,7 +29,9 @@ class StatsdMixin:
         :param path: elements of the metric path to record
 
         """
-        self.application.statsd.send(path, duration * 1000.0, 'ms')
+        client = get_client(self.application)
+        if client is not None:
+            client.send(path, duration * 1000.0, 'ms')
 
     def increase_counter(self, *path, **kwargs):
         """Increase a counter.
@@ -45,7 +47,9 @@ class StatsdMixin:
             omitted, the counter is increased by one.
 
         """
-        self.application.statsd.send(path, kwargs.get('amount', '1'), 'c')
+        client = get_client(self.application)
+        if client is not None:
+            client.send(path, kwargs.get('amount', '1'), 'c')
 
     @contextlib.contextmanager
     def execution_timer(self, *path):
@@ -227,3 +231,12 @@ def install(application, **kwargs):
 
     setattr(application, 'statsd', StatsDCollector(**kwargs))
     return True
+
+
+def get_client(application):
+    """Fetch the statsd client if it is installed.
+
+    :rtype: .StatsDCollector
+
+    """
+    return getattr(application, 'statsd', None)

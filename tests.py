@@ -162,6 +162,13 @@ class TCPStatsdMetricCollectionTests(testing.AsyncHTTPTestCase):
         response = self.fetch('/status_code')
         self.assertEqual(response.code, 200)
 
+    def test_that_mixin_works_without_client(self):
+        self.application.statsd.close()
+        delattr(self.application, 'statsd')
+
+        response = self.fetch('/', method='POST', body='')
+        self.assertEqual(response.code, 204)
+
 
 class TCPStatsdConfigurationTests(testing.AsyncHTTPTestCase):
 
@@ -307,6 +314,13 @@ class UDPStatsdMetricCollectionTests(testing.AsyncHTTPTestCase):
         expected = 'testing.timers.DefaultStatusCode.GET.200'
         self.assertEqual(expected,
                          list(self.statsd.find_metrics(expected, 'ms'))[0][0])
+
+    def test_that_mixin_works_without_client(self):
+        self.application.statsd.close()
+        delattr(self.application, 'statsd')
+
+        response = self.fetch('/', method='POST', body='')
+        self.assertEqual(response.code, 204)
 
 
 class UDPStatsdConfigurationTests(testing.AsyncHTTPTestCase):

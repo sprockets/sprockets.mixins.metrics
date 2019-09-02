@@ -52,6 +52,15 @@ Statsd Implementation
 .. autoclass:: sprockets.mixins.metrics.statsd.StatsDCollector
    :members:
 
+Application Functions
+---------------------
+Before you can use the mixin, you have to install the client by calling
+the ``install`` function on your application instance.
+
+.. autofunction:: sprockets.mixins.metrics.statsd.install
+
+.. autofunction:: sprockets.mixins.metrics.statsd.get_client
+
 Testing Helpers
 ---------------
 *So who actually tests that their metrics are emitted as they expect?*
