@@ -49,6 +49,9 @@ Statsd Implementation
 .. autoclass:: sprockets.mixins.metrics.statsd.StatsdMixin
    :members:
 
+.. autoclass:: sprockets.mixins.metrics.statsd.StatsDCollector
+   :members:
+
 Testing Helpers
 ---------------
 *So who actually tests that their metrics are emitted as they expect?*

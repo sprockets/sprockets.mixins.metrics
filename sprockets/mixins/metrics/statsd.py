@@ -86,10 +86,9 @@ class StatsdMixin:
 class StatsDCollector:
     """Collects and submits stats to StatsD.
 
-     This class should be constructed using the
-    :meth:`~sprockets.mixins.statsd.install` method. When installed,
-    it is attached to the :class:`~tornado.web.Application` instance
-    for your web application.
+    This class should be constructed using the :func:`.install` function.
+    When installed, it is attached to the :class:`~tornado.web.Application`
+    instance for your web application.
 
     :param str host: The StatsD host
     :param str port: The StatsD port
@@ -201,16 +200,16 @@ def install(application, **kwargs):
     :param tornado.web.Application application: the application to
         install the collector into.
     :param kwargs: keyword parameters to pass to the
-        :class:`StatsDCollector` initializer.
+        :class:`.StatsDCollector` initializer.
     :returns: :data:`True` if the client was installed successfully,
         or :data:`False` otherwise.
 
     - **host** The StatsD host. If host is not specified, the
         ``STATSD_HOST`` environment variable, or default `127.0.0.1`,
-        will be pass into the :class:`StatsDCollector`.
+        will be pass into the :class:`.StatsDCollector`.
     - **port** The StatsD port. If port is not specified, the
         ``STATSD_PORT`` environment variable, or default `8125`,
-        will be pass into the :class:`StatsDCollector`.
+        will be pass into the :class:`.StatsDCollector`.
     - **namespace** The StatsD bucket to write metrics into.
 
     """
