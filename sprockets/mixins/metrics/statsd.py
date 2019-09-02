@@ -128,7 +128,7 @@ class StatsDCollector:
         """
         sock = iostream.IOStream(socket.socket(
                     socket.AF_INET, socket.SOCK_STREAM, socket.IPPROTO_TCP))
-        sock.connect(self._address, self._tcp_on_connected)
+        sock.connect(self._address)
         sock.set_close_callback(self._tcp_on_closed)
         return sock
 
@@ -138,10 +138,6 @@ class StatsDCollector:
                        self._tcp_reconnect_sleep)
         await asyncio.sleep(self._tcp_reconnect_sleep)
         self._sock = self._tcp_socket()
-
-    def _tcp_on_connected(self):
-        """Invoked when the IOStream is connected"""
-        LOGGER.debug('Connected to statsd at %s via TCP', self._address)
 
     def send(self, path, value, metric_type):
         """Send a metric to Statsd.
