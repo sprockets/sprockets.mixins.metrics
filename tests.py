@@ -169,6 +169,29 @@ class TCPStatsdMetricCollectionTests(testing.AsyncHTTPTestCase):
         response = self.fetch('/', method='POST', body='')
         self.assertEqual(response.code, 204)
 
+    def test_that_client_closes_socket(self):
+        response = self.fetch('/status_code')
+        self.assertEqual(response.code, 200)
+
+        self.application.statsd.close()
+        response = self.fetch('/status_code')
+        self.assertEqual(response.code, 200)
+        self.assertTrue(self.application.statsd._sock.closed())
+
+    def test_that_client_can_be_closed_multiple_times(self):
+        response = self.fetch('/status_code')
+        self.assertEqual(response.code, 200)
+
+        self.application.statsd.close()
+        response = self.fetch('/status_code')
+        self.assertEqual(response.code, 200)
+        self.assertTrue(self.application.statsd._sock.closed())
+
+        self.application.statsd.close()
+        response = self.fetch('/status_code')
+        self.assertEqual(response.code, 200)
+        self.assertTrue(self.application.statsd._sock.closed())
+
 
 class TCPStatsdConfigurationTests(testing.AsyncHTTPTestCase):
 

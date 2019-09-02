@@ -113,6 +113,7 @@ class StatsDCollector:
         self._namespace = namespace
         self._prepend_metric_type = prepend_metric_type
         self._tcp_reconnect_sleep = 5
+        self._closing = False
 
         if protocol == 'tcp':
             self._tcp = True
@@ -137,10 +138,19 @@ class StatsDCollector:
 
     async def _tcp_on_closed(self):
         """Invoked when the socket is closed."""
-        LOGGER.warning('Not connected to statsd, connecting in %s seconds',
-                       self._tcp_reconnect_sleep)
-        await asyncio.sleep(self._tcp_reconnect_sleep)
-        self._sock = self._tcp_socket()
+        if self._closing:
+            LOGGER.info('Statsd socket closed')
+        else:
+            LOGGER.warning('Not connected to statsd, connecting in %s seconds',
+                           self._tcp_reconnect_sleep)
+            await asyncio.sleep(self._tcp_reconnect_sleep)
+            self._sock = self._tcp_socket()
+
+    def close(self):
+        """Gracefully close the socket."""
+        if not self._closing:
+            self._closing = True
+            self._sock.close()
 
     def send(self, path, value, metric_type):
         """Send a metric to Statsd.
