@@ -29,7 +29,9 @@ class StatsdMixin:
         :param path: elements of the metric path to record
 
         """
-        self.application.statsd.send(path, duration * 1000.0, 'ms')
+        client = get_client(self.application)
+        if client is not None:
+            client.send(path, duration * 1000.0, 'ms')
 
     def increase_counter(self, *path, **kwargs):
         """Increase a counter.
@@ -45,7 +47,9 @@ class StatsdMixin:
             omitted, the counter is increased by one.
 
         """
-        self.application.statsd.send(path, kwargs.get('amount', '1'), 'c')
+        client = get_client(self.application)
+        if client is not None:
+            client.send(path, kwargs.get('amount', '1'), 'c')
 
     @contextlib.contextmanager
     def execution_timer(self, *path):
@@ -86,10 +90,9 @@ class StatsdMixin:
 class StatsDCollector:
     """Collects and submits stats to StatsD.
 
-     This class should be constructed using the
-    :meth:`~sprockets.mixins.statsd.install` method. When installed,
-    it is attached to the :class:`~tornado.web.Application` instance
-    for your web application.
+    This class should be constructed using the :func:`.install` function.
+    When installed, it is attached to the :class:`~tornado.web.Application`
+    instance for your web application.
 
     :param str host: The StatsD host
     :param str port: The StatsD port
@@ -110,6 +113,7 @@ class StatsDCollector:
         self._namespace = namespace
         self._prepend_metric_type = prepend_metric_type
         self._tcp_reconnect_sleep = 5
+        self._closing = False
 
         if protocol == 'tcp':
             self._tcp = True
@@ -128,20 +132,25 @@ class StatsDCollector:
         """
         sock = iostream.IOStream(socket.socket(
                     socket.AF_INET, socket.SOCK_STREAM, socket.IPPROTO_TCP))
-        sock.connect(self._address, self._tcp_on_connected)
+        sock.connect(self._address)
         sock.set_close_callback(self._tcp_on_closed)
         return sock
 
     async def _tcp_on_closed(self):
         """Invoked when the socket is closed."""
-        LOGGER.warning('Not connected to statsd, connecting in %s seconds',
-                       self._tcp_reconnect_sleep)
-        await asyncio.sleep(self._tcp_reconnect_sleep)
-        self._sock = self._tcp_socket()
+        if self._closing:
+            LOGGER.info('Statsd socket closed')
+        else:
+            LOGGER.warning('Not connected to statsd, connecting in %s seconds',
+                           self._tcp_reconnect_sleep)
+            await asyncio.sleep(self._tcp_reconnect_sleep)
+            self._sock = self._tcp_socket()
 
-    def _tcp_on_connected(self):
-        """Invoked when the IOStream is connected"""
-        LOGGER.debug('Connected to statsd at %s via TCP', self._address)
+    def close(self):
+        """Gracefully close the socket."""
+        if not self._closing:
+            self._closing = True
+            self._sock.close()
 
     def send(self, path, value, metric_type):
         """Send a metric to Statsd.
@@ -205,16 +214,16 @@ def install(application, **kwargs):
     :param tornado.web.Application application: the application to
         install the collector into.
     :param kwargs: keyword parameters to pass to the
-        :class:`StatsDCollector` initializer.
+        :class:`.StatsDCollector` initializer.
     :returns: :data:`True` if the client was installed successfully,
         or :data:`False` otherwise.
 
     - **host** The StatsD host. If host is not specified, the
         ``STATSD_HOST`` environment variable, or default `127.0.0.1`,
-        will be pass into the :class:`StatsDCollector`.
+        will be pass into the :class:`.StatsDCollector`.
     - **port** The StatsD port. If port is not specified, the
         ``STATSD_PORT`` environment variable, or default `8125`,
-        will be pass into the :class:`StatsDCollector`.
+        will be pass into the :class:`.StatsDCollector`.
     - **namespace** The StatsD bucket to write metrics into.
 
     """
@@ -232,3 +241,12 @@ def install(application, **kwargs):
 
     setattr(application, 'statsd', StatsDCollector(**kwargs))
     return True
+
+
+def get_client(application):
+    """Fetch the statsd client if it is installed.
+
+    :rtype: .StatsDCollector
+
+    """
+    return getattr(application, 'statsd', None)
