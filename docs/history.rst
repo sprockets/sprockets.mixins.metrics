@@ -3,8 +3,8 @@
 Release History
 ===============
 
-`Next Release`_
----------------
+`4.1.0`_ (04-Sep-2019)
+----------------------
 - Add configuration documentation
 - Exclude Tornado >6 (as-yet-unreleased version)
 - Add :func:`sprockets.mixins.metrics.statsd.get_client` function
@@ -95,7 +95,8 @@ Release History
 - Add :class:`sprockets.mixins.metrics.InfluxDBMixin`
 - Add :class:`sprockets.mixins.metrics.influxdb.InfluxDBConnection`
 
-.. _Next Release: https://github.com/sprockets/sprockets.mixins.metrics/compare/4.0.0...master
+.. _Next Release: https://github.com/sprockets/sprockets.mixins.metrics/compare/4.1.0...master
+.. _4.1.0: https://github.com/sprockets/sprockets.mixins.metrics/compare/4.0.0...4.1.0
 .. _4.0.0: https://github.com/sprockets/sprockets.mixins.metrics/compare/3.1.1...4.0.0
 .. _3.1.1: https://github.com/sprockets/sprockets.mixins.metrics/compare/3.1.0...3.1.1
 .. _3.1.0: https://github.com/sprockets/sprockets.mixins.metrics/compare/3.0.4...3.1.0
