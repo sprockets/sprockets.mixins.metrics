@@ -25,7 +25,7 @@ setuptools.setup(
     packages=setuptools.find_packages(exclude=['examples.']),
     namespace_packages=['sprockets', 'sprockets.mixins'],
     classifiers=[
-        'Development Status :: 5 - Production/Stable',
+        'Development Status :: 7 - Inactive',
         'Environment :: No Input/Output (Daemon)',
         'Intended Audience :: Developers',
         'License :: OSI Approved :: BSD License',

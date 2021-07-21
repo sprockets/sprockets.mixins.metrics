@@ -3,6 +3,12 @@
 Release History
 ===============
 
+Next release
+------------
+- Library deprecated -- use `sprockets-statsd`_ if you need StatsD support
+
+.. _sprockets-statsd: https://github.com/sprockets/sprockets-statsd
+
 `4.1.0`_ (04-Sep-2019)
 ----------------------
 - Add configuration documentation
