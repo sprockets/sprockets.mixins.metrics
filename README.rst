@@ -8,6 +8,14 @@ Adjust counter and timer metrics in `StatsD`_ using the same API.
 The mix-in is configured through the ``tornado.web.Application`` settings
 property using a key defined by the specific mix-in.
 
+Deprecation Notice
+------------------
+This library is deprecated.  It will not receive features or bug fixes.
+Please switch to either `sprockets-influxdb`_ or `sprockets-statsd`_.
+
+.. _sprockets-influxdb: https://github.com/sprockets/sprockets-influxdb
+.. _sprockets-statsd: https://github.com/sprockets/sprockets-statsd
+
 Documentation
 -------------
 https://sprocketsmixinsmetrics.readthedocs.io
