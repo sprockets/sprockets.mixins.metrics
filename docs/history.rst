@@ -3,8 +3,8 @@
 Release History
 ===============
 
-Next release
-------------
+`4.2.0`_ (21-Jul-2021)
+----------------------
 - Library deprecated -- use `sprockets-statsd`_ if you need StatsD support
 
 .. _sprockets-statsd: https://github.com/sprockets/sprockets-statsd
@@ -101,7 +101,7 @@ Next release
 - Add :class:`sprockets.mixins.metrics.InfluxDBMixin`
 - Add :class:`sprockets.mixins.metrics.influxdb.InfluxDBConnection`
 
-.. _Next Release: https://github.com/sprockets/sprockets.mixins.metrics/compare/4.1.0...master
+.. _4.2.0: https://github.com/sprockets/sprockets.mixins.metrics/compare/4.1.0...4.2.0
 .. _4.1.0: https://github.com/sprockets/sprockets.mixins.metrics/compare/4.0.0...4.1.0
 .. _4.0.0: https://github.com/sprockets/sprockets.mixins.metrics/compare/3.1.1...4.0.0
 .. _3.1.1: https://github.com/sprockets/sprockets.mixins.metrics/compare/3.1.0...3.1.1
